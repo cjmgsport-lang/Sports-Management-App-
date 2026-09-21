@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LinkButton } from "@/components/ui";
+import { AudienceTabs } from "@/components/audience-tabs";
 
 const FEATURES: { title: string; desc: string }[] = [
   { title: "Editable calendars", desc: "Shared team calendars for training, matches, meetings and travel — always up to date." },
@@ -58,7 +59,20 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-6xl px-4 py-4">
+        <div className="text-center">
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">Whoever you are on the team</p>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900 sm:text-3xl">See what Freedom looks like for you</h2>
+        </div>
+        <div className="mt-8">
+          <AudienceTabs />
+        </div>
+      </section>
+
       <section className="mx-auto max-w-6xl px-4 py-12">
+        <div className="mb-6 text-center">
+          <h2 className="text-2xl font-semibold text-slate-900">Everything included, for the whole organization</h2>
+        </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
             <div key={f.title} className="rounded-xl border border-slate-200 p-5">
