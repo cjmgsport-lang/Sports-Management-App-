@@ -31,7 +31,7 @@ export function Button({
   variant = "primary",
   size = "md",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger" | "ghost"; size?: "sm" | "md" }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "accent" | "danger" | "ghost"; size?: "sm" | "md" }) {
   return (
     <button
       className={clsx(
@@ -39,6 +39,7 @@ export function Button({
         size === "sm" ? "px-3 py-1.5 text-sm" : "px-4 py-2 text-sm",
         variant === "primary" && "bg-brand-600 text-white hover:bg-brand-700",
         variant === "secondary" && "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
+        variant === "accent" && "bg-accent-500 text-white hover:bg-accent-600",
         variant === "danger" && "bg-red-600 text-white hover:bg-red-700",
         variant === "ghost" && "text-slate-600 hover:bg-slate-100",
         className
@@ -56,7 +57,7 @@ export function LinkButton({
 }: {
   href: string;
   className?: string;
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "accent" | "ghost";
   children: React.ReactNode;
 }) {
   return (
@@ -66,6 +67,7 @@ export function LinkButton({
         "inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
         variant === "primary" && "bg-brand-600 text-white hover:bg-brand-700",
         variant === "secondary" && "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
+        variant === "accent" && "bg-accent-500 text-white hover:bg-accent-600",
         variant === "ghost" && "text-slate-600 hover:bg-slate-100",
         className
       )}

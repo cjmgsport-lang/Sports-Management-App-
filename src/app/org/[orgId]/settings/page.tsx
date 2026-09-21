@@ -41,7 +41,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ orgId
                   No logo
                 </div>
               )}
-              <div className="h-10 w-10 rounded-lg border border-slate-200" style={{ backgroundColor: org?.brandColor ?? "#166ef2" }} />
+              <div className="h-10 w-10 rounded-lg border border-slate-200" style={{ backgroundColor: org?.brandColor ?? "#0284c7" }} />
             </div>
 
             {isAdmin(membership.role) ? (
@@ -50,7 +50,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ orgId
                   <Input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="w-64" />
                 </Field>
                 <Field label="Brand color">
-                  <input type="color" name="brandColor" defaultValue={org?.brandColor ?? "#166ef2"} className="h-10 w-16 rounded border border-slate-300" />
+                  <input type="color" name="brandColor" defaultValue={org?.brandColor ?? "#0284c7"} className="h-10 w-16 rounded border border-slate-300" />
                 </Field>
                 <Button type="submit">Save branding</Button>
               </form>

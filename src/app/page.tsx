@@ -29,7 +29,9 @@ export default function LandingPage() {
             <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900">
               Log in
             </Link>
-            <LinkButton href="/signup">Get started</LinkButton>
+            <LinkButton href="/signup" variant="accent">
+              Get started
+            </LinkButton>
           </nav>
         </div>
       </header>
@@ -88,7 +90,7 @@ export default function LandingPage() {
         <p className="mx-auto mt-2 max-w-xl text-brand-100">
           Every module — from periodised training to trials and kit orders — works together out of the box.
         </p>
-        <LinkButton href="/signup" className="mt-6">
+        <LinkButton href="/signup" variant="accent" className="mt-6">
           Create your organization
         </LinkButton>
       </section>
