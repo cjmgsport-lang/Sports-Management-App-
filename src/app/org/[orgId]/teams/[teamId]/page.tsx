@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select } from "@/components/ui";
 import { addTeamMemberAction, removeTeamMemberAction } from "@/lib/actions/teams";
-import { isAdmin, ROLE_LABELS } from "@/lib/roles";
+import { isAdmin, ROLE_LABELS, TEAM_ROLE_LABELS } from "@/lib/roles";
 
 export default async function TeamDetailPage({
   params,
@@ -57,7 +57,7 @@ export default async function TeamDetailPage({
                           <p className="text-xs text-slate-400">{tm.user.email}</p>
                         </td>
                         <td className="px-5 py-2.5">
-                          <Badge color="blue">{tm.role.replace(/_/g, " ")}</Badge>
+                          <Badge color={tm.role === "HOD" ? "purple" : "blue"}>{TEAM_ROLE_LABELS[tm.role] ?? tm.role}</Badge>
                         </td>
                         <td className="px-5 py-2.5 text-slate-500">{tm.jerseyNumber ?? "—"}</td>
                         <td className="px-5 py-2.5 text-right">
@@ -98,12 +98,11 @@ export default async function TeamDetailPage({
                 </Field>
                 <Field label="Team role">
                   <Select name="teamRole" defaultValue="ATHLETE">
-                    <option value="ATHLETE">Athlete</option>
-                    <option value="HEAD_COACH">Head Coach</option>
-                    <option value="ASSISTANT_COACH">Assistant Coach</option>
-                    <option value="MANAGER">Manager</option>
-                    <option value="ANALYST">Analyst</option>
-                    <option value="MEDICAL">Medical</option>
+                    {Object.entries(TEAM_ROLE_LABELS).map(([v, l]) => (
+                      <option key={v} value={v}>
+                        {l}
+                      </option>
+                    ))}
                   </Select>
                 </Field>
                 <Button type="submit" className="w-full">

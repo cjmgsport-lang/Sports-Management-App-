@@ -24,6 +24,9 @@ async function main() {
   const coach = await db.user.create({
     data: { name: "Coach Themba Nkosi", email: "coach@freedomsports.co.za", passwordHash, phone: "0827654321" },
   });
+  const hod = await db.user.create({
+    data: { name: "Pieter Nel", email: "hod@freedomsports.co.za", passwordHash, phone: "0829998888" },
+  });
   const medical = await db.user.create({
     data: { name: "Dr. Lindiwe Dlamini", email: "medical@freedomsports.co.za", passwordHash },
   });
@@ -40,6 +43,7 @@ async function main() {
   await db.membership.createMany({
     data: [
       { userId: owner.id, organizationId: org.id, role: "OWNER" },
+      { userId: hod.id, organizationId: org.id, role: "HOD" },
       { userId: coach.id, organizationId: org.id, role: "COACH" },
       { userId: medical.id, organizationId: org.id, role: "MEDICAL" },
       { userId: athlete1.id, organizationId: org.id, role: "ATHLETE" },
@@ -55,6 +59,7 @@ async function main() {
   await db.teamMembership.createMany({
     data: [
       { teamId: team.id, userId: coach.id, role: "HEAD_COACH" },
+      { teamId: team.id, userId: hod.id, role: "HOD" },
       { teamId: team.id, userId: medical.id, role: "MEDICAL" },
       { teamId: team.id, userId: athlete1.id, role: "ATHLETE", jerseyNumber: "7", position: "Midfield" },
       { teamId: team.id, userId: athlete2.id, role: "ATHLETE", jerseyNumber: "10", position: "Striker" },
@@ -237,6 +242,7 @@ async function main() {
   console.log("Seed complete.");
   console.log("Login with any of these emails, password: password123");
   console.log("  owner@freedomsports.co.za (Owner)");
+  console.log("  hod@freedomsports.co.za (Head of Department - full permissions)");
   console.log("  coach@freedomsports.co.za (Coach)");
   console.log("  medical@freedomsports.co.za (Medical)");
   console.log("  kabelo@freedomsports.co.za (Athlete)");

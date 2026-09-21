@@ -98,7 +98,7 @@ export async function updateMembershipRoleAction(orgId: string, userId: string, 
   const { membership } = await requireOrgMembership(orgId);
   if (!isAdmin(membership.role)) throw new Error("Only admins can change roles.");
   const role = z
-    .enum(["OWNER", "ADMIN", "COACH", "ASSISTANT_COACH", "MEDICAL", "MANAGER", "ANALYST", "ATHLETE", "PARENT", "STAFF"])
+    .enum(["OWNER", "ADMIN", "HOD", "COACH", "ASSISTANT_COACH", "MEDICAL", "MANAGER", "ANALYST", "ATHLETE", "PARENT", "STAFF"])
     .parse(formData.get("role"));
   await db.membership.update({
     where: { userId_organizationId: { userId, organizationId: orgId } },

@@ -4,11 +4,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
+import { canCoach } from "@/lib/roles";
 
 async function assertCanCoach(orgId: string) {
   const { user, membership } = await requireOrgMembership(orgId);
-  const allowed = ["OWNER", "ADMIN", "COACH", "ASSISTANT_COACH", "MANAGER"];
-  if (!allowed.includes(membership.role)) throw new Error("You don't have permission to edit training plans.");
+  if (!canCoach(membership.role)) throw new Error("You don't have permission to edit training plans.");
   return { user, membership };
 }
 

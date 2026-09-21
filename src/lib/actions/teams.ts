@@ -40,6 +40,7 @@ const addMemberSchema = z.object({
   orgRole: z.enum([
     "OWNER",
     "ADMIN",
+    "HOD",
     "COACH",
     "ASSISTANT_COACH",
     "MEDICAL",
@@ -49,7 +50,7 @@ const addMemberSchema = z.object({
     "PARENT",
     "STAFF",
   ]),
-  teamRole: z.enum(["HEAD_COACH", "ASSISTANT_COACH", "MANAGER", "ANALYST", "MEDICAL", "ATHLETE"]),
+  teamRole: z.enum(["HEAD_COACH", "ASSISTANT_COACH", "HOD", "MANAGER", "ANALYST", "MEDICAL", "ATHLETE"]),
 });
 
 export async function addTeamMemberAction(orgId: string, teamId: string, formData: FormData) {

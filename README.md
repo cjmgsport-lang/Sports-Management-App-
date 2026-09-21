@@ -41,6 +41,7 @@ Open http://localhost:3000 and log in with any of the seeded accounts (password 
 | Email | Role |
 | --- | --- |
 | owner@freedomsports.co.za | Owner |
+| hod@freedomsports.co.za | Head of Department (full permissions) |
 | coach@freedomsports.co.za | Coach |
 | medical@freedomsports.co.za | Medical staff |
 | kabelo@freedomsports.co.za | Athlete |
