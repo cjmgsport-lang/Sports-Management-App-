@@ -1,23 +1,28 @@
 // Freedom Sports Management — data model
-// Dev uses SQLite for zero-config local running. For production, switch
-// provider to "postgresql" and point DATABASE_URL at your Postgres instance —
-// the schema below is written to be portable to Postgres without changes.
+// Postgres in every environment (local dev included — see README for a
+// one-line Docker setup). `directUrl` is used only by `prisma migrate
+// deploy`/`migrate dev`, so it can point at a non-pooled connection when
+// your provider's main DATABASE_URL is a pooled one (Neon, Vercel Postgres,
+// Supabase, etc.) — set it equal to DATABASE_URL if you only have one.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------- "Enums" ----------
-// SQLite has no native enum support, so these fields are stored as String
-// and constrained by zod at the server-action layer (see src/lib/actions/*
-// and src/lib/roles.ts for the allowed literal values). If you switch the
-// datasource below to "postgresql" for production, you can optionally
-// convert these back to native Prisma `enum` types.
+// These fields are stored as String and constrained by zod at the
+// server-action layer (see src/lib/actions/* and src/lib/roles.ts for the
+// allowed literal values) rather than as native Prisma `enum` types — this
+// schema started on SQLite (no enum support) and the string-based approach
+// was kept for simplicity when moving to Postgres. Feel free to convert
+// individual fields to native `enum` types if you'd like stronger DB-level
+// guarantees; nothing here depends on them staying strings.
 
 // ---------- Core tenancy ----------
 
