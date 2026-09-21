@@ -1,0 +1,622 @@
+// Freedom Sports Management — data model
+// Dev uses SQLite for zero-config local running. For production, switch
+// provider to "postgresql" and point DATABASE_URL at your Postgres instance —
+// the schema below is written to be portable to Postgres without changes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- "Enums" ----------
+// SQLite has no native enum support, so these fields are stored as String
+// and constrained by zod at the server-action layer (see src/lib/actions/*
+// and src/lib/roles.ts for the allowed literal values). If you switch the
+// datasource below to "postgresql" for production, you can optionally
+// convert these back to native Prisma `enum` types.
+
+// ---------- Core tenancy ----------
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  type      String
+  province  String?
+  city      String?
+  createdAt DateTime @default(now())
+
+  subscription Subscription?
+  memberships  Membership[]
+  teams        Team[]
+  notices      Notice[]
+  resources    Resource[]
+  fixtureTemplates FixtureTemplate[]
+  tournaments  Tournament[]
+  fixtures     Fixture[]
+  uploads      UploadAsset[]
+  clothingItems ClothingItem[]
+  clothingOrders ClothingOrder[]
+  trialEvents  TrialEvent[]
+  drills       Drill[]
+  memberProfiles MemberProfile[]
+  medicalRecords MedicalRecord[]
+  transportNeeds TransportNeed[]
+  seasonBudgets SeasonBudget[]
+  idps         IndividualDevelopmentPlan[]
+  seasons      Season[]
+}
+
+model Subscription {
+  id             String             @id @default(cuid())
+  organizationId String             @unique
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan           String             @default("STARTER")
+  status         String             @default("TRIALING")
+  seats          Int                @default(25)
+  trialEndsAt    DateTime?
+  renewsAt       DateTime?
+  createdAt      DateTime           @default(now())
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  phone        String?
+  dateOfBirth  DateTime?
+  avatarUrl    String?
+  createdAt    DateTime  @default(now())
+
+  memberships     Membership[]
+  teamMemberships TeamMembership[]
+
+  memberProfile   MemberProfile?
+  medicalRecord   MedicalRecord?
+  transportNeed   TransportNeed?
+
+  seasonBudgets   SeasonBudget[]
+  idps            IndividualDevelopmentPlan[] @relation("AthleteIdps")
+  authoredIdps    IndividualDevelopmentPlan[] @relation("AuthorIdps")
+
+  feedbackReceived WeeklyFeedback[] @relation("AthleteFeedback")
+  feedbackGiven    WeeklyFeedback[] @relation("CoachFeedback")
+
+  chatMessages    ChatMessage[]
+  notices         Notice[]
+  uploads         UploadAsset[]
+  clothingOrders  ClothingOrder[]
+  resourceBookings ResourceBooking[]
+  selectionDocs   TrialSelectionDocument[] @relation("AthleteSelection")
+  decidedSelections TrialSelectionDocument[] @relation("DeciderSelection")
+  calendarEvents  CalendarEvent[]
+  trainingSessions TrainingSession[]
+}
+
+model Membership {
+  id             String         @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String
+  createdAt      DateTime       @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+}
+
+model Team {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  ageGroup       String?
+  sport          String
+  gender         String?
+  season         String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  memberships    TeamMembership[]
+  events         CalendarEvent[]
+  seasons        Season[]
+  microcycles    Microcycle[]
+  channels       ChatChannel[]
+  fixtures       Fixture[]
+  notices        Notice[]
+  clothingOrders ClothingOrder[]
+  trialEvents    TrialEvent[]
+  resourceBookings ResourceBooking[]
+  idps           IndividualDevelopmentPlan[]
+  weeklyFeedback WeeklyFeedback[]
+}
+
+model TeamMembership {
+  id            String   @id @default(cuid())
+  teamId        String
+  userId        String
+  role          String
+  jerseyNumber  String?
+  position      String?
+  createdAt     DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+// ---------- Calendar ----------
+
+model CalendarEvent {
+  id             String    @id @default(cuid())
+  teamId         String
+  title          String
+  type           String    @default("TRAINING")
+  startsAt       DateTime
+  endsAt         DateTime
+  location       String?
+  description    String?
+  recurrenceRule String?
+  createdById    String
+  createdAt      DateTime  @default(now())
+
+  team        Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdBy   User @relation(fields: [createdById], references: [id])
+}
+
+// ---------- Periodized training plans ----------
+
+model Season {
+  id             String   @id @default(cuid())
+  organizationId String
+  teamId         String
+  name           String
+  startDate      DateTime
+  endDate        DateTime
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  macrocycles  Macrocycle[]
+}
+
+model Macrocycle {
+  id        String   @id @default(cuid())
+  seasonId  String
+  name      String
+  focus     String?
+  startDate DateTime
+  endDate   DateTime
+
+  season      Season       @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  mesocycles  Mesocycle[]
+}
+
+model Mesocycle {
+  id           String   @id @default(cuid())
+  macrocycleId String
+  name         String
+  focus        String?
+  startDate    DateTime
+  endDate      DateTime
+
+  macrocycle  Macrocycle    @relation(fields: [macrocycleId], references: [id], onDelete: Cascade)
+  microcycles Microcycle[]
+}
+
+model Microcycle {
+  id          String   @id @default(cuid())
+  mesocycleId String
+  teamId      String
+  weekNumber  Int
+  startDate   DateTime
+  endDate     DateTime
+  theme       String?
+  notes       String?
+
+  mesocycle Mesocycle         @relation(fields: [mesocycleId], references: [id], onDelete: Cascade)
+  team      Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  sessions  TrainingSession[]
+}
+
+model TrainingSession {
+  id           String   @id @default(cuid())
+  microcycleId String
+  date         DateTime
+  startTime    String?
+  endTime      String?
+  location     String?
+  focus        String
+  intensityRpe Int?
+  notes        String?
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  microcycle Microcycle    @relation(fields: [microcycleId], references: [id], onDelete: Cascade)
+  createdBy  User          @relation(fields: [createdById], references: [id])
+  drills     SessionDrill[]
+  uploads    UploadAsset[]
+}
+
+model Drill {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String
+  category       String?
+  description    String?
+  durationMin    Int?
+  equipment      String?
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sessions     SessionDrill[]
+}
+
+model SessionDrill {
+  id          String @id @default(cuid())
+  sessionId   String
+  drillId     String
+  orderIndex  Int    @default(0)
+  durationMin Int?
+  notes       String?
+
+  session TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  drill   Drill           @relation(fields: [drillId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Chat ----------
+
+model ChatChannel {
+  id        String   @id @default(cuid())
+  teamId    String
+  name      String
+  isGeneral Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  team     Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  channelId String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  channel ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author  User        @relation(fields: [authorId], references: [id])
+}
+
+// ---------- Noticeboard ----------
+
+model Notice {
+  id             String          @id @default(cuid())
+  organizationId String
+  teamId         String?
+  authorId       String
+  title          String
+  body           String
+  pinned         Boolean         @default(false)
+  audience       String          @default("ALL")
+  createdAt      DateTime        @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  author       User         @relation(fields: [authorId], references: [id])
+}
+
+// ---------- Fixtures / tournaments / results ----------
+
+model FixtureTemplate {
+  id                 String  @id @default(cuid())
+  organizationId     String
+  name               String
+  sport              String
+  defaultDurationMin Int?
+  defaultVenue       String?
+  rulesNotes         String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fixtures     Fixture[]
+}
+
+model Tournament {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  startDate      DateTime
+  endDate        DateTime
+  venue          String?
+  format         String?
+  description    String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fixtures     Fixture[]
+}
+
+model Fixture {
+  id             String        @id @default(cuid())
+  organizationId String
+  teamId         String
+  tournamentId   String?
+  templateId     String?
+  opponent       String
+  homeAway       String        @default("HOME")
+  venue          String?
+  startsAt       DateTime
+  status         String        @default("SCHEDULED")
+  ourScore       Int?
+  opponentScore  Int?
+  notes          String?
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  tournament   Tournament?      @relation(fields: [tournamentId], references: [id])
+  template     FixtureTemplate? @relation(fields: [templateId], references: [id])
+  result       MatchResult?
+  uploads      UploadAsset[]
+}
+
+model MatchResult {
+  id          String   @id @default(cuid())
+  fixtureId   String   @unique
+  summary     String?
+  statsJson   String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  fixture Fixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Generic uploads (GPS / video / session animation / PDF / image) ----------
+
+model UploadAsset {
+  id               String     @id @default(cuid())
+  organizationId   String
+  kind             String
+  filename         String
+  storedPath       String
+  mimeType         String
+  sizeBytes        Int
+  description      String?
+  uploadedById     String
+  linkedFixtureId  String?
+  linkedSessionId  String?
+  linkedAthleteId  String?
+  createdAt        DateTime   @default(now())
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy   User             @relation(fields: [uploadedById], references: [id])
+  fixture      Fixture?         @relation(fields: [linkedFixtureId], references: [id])
+  session      TrainingSession? @relation(fields: [linkedSessionId], references: [id])
+}
+
+// ---------- Clothing orders ----------
+
+model ClothingItem {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String
+  category       String?
+  sizesAvailable String?
+  unitPrice      Float   @default(0)
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lines        ClothingOrderLine[]
+}
+
+model ClothingOrder {
+  id             String      @id @default(cuid())
+  organizationId String
+  teamId         String?
+  requestedById  String
+  status         String      @default("DRAFT")
+  notes          String?
+  createdAt      DateTime    @default(now())
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?               @relation(fields: [teamId], references: [id])
+  requestedBy  User                @relation(fields: [requestedById], references: [id])
+  lines        ClothingOrderLine[]
+}
+
+model ClothingOrderLine {
+  id        String @id @default(cuid())
+  orderId   String
+  itemId    String
+  size      String?
+  quantity  Int    @default(1)
+  athleteName String?
+
+  order ClothingOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item  ClothingItem  @relation(fields: [itemId], references: [id])
+}
+
+// ---------- Member forms: profile / medical / transport ----------
+
+model MemberProfile {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  organizationId        String
+  idNumber              String?
+  address               String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  schoolOrEmployer      String?
+  notes                 String?
+  updatedAt             DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model MedicalRecord {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  organizationId   String
+  allergies        String?
+  medicalAidName   String?
+  medicalAidNumber String?
+  conditions       String?
+  medications      String?
+  doctorName       String?
+  doctorPhone      String?
+  consentGiven     Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model TransportNeed {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  organizationId  String
+  needsTransport  Boolean  @default(false)
+  pickupAddress   String?
+  dropoffAddress  String?
+  contactPhone    String?
+  notes           String?
+  updatedAt       DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Personal season budget ----------
+
+model SeasonBudget {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  seasonName     String
+  totalBudget    Float    @default(0)
+  createdAt      DateTime @default(now())
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lineItems    BudgetLineItem[]
+}
+
+model BudgetLineItem {
+  id        String   @id @default(cuid())
+  budgetId  String
+  category  String
+  description String?
+  amount    Float
+  dueDate   DateTime?
+  paid      Boolean  @default(false)
+
+  budget SeasonBudget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Individual development plans ----------
+
+model IndividualDevelopmentPlan {
+  id                  String    @id @default(cuid())
+  athleteId           String
+  organizationId      String
+  teamId              String?
+  seasonName          String?
+  goals               String
+  strengths           String?
+  areasForImprovement String?
+  actionPlan          String?
+  reviewDate          DateTime?
+  createdById         String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  athlete      User         @relation("AthleteIdps", fields: [athleteId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation("AuthorIdps", fields: [createdById], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?        @relation(fields: [teamId], references: [id])
+}
+
+// ---------- Weekly feedback ----------
+
+model WeeklyFeedback {
+  id                String   @id @default(cuid())
+  athleteId         String
+  coachId           String
+  teamId            String
+  weekStarting      DateTime
+  performanceRating Int
+  strengths         String?
+  areasToImprove    String?
+  athleteComment    String?
+  createdAt         DateTime @default(now())
+
+  athlete User @relation("AthleteFeedback", fields: [athleteId], references: [id], onDelete: Cascade)
+  coach   User @relation("CoachFeedback", fields: [coachId], references: [id])
+  team    Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Trials & selection ----------
+
+model TrialEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  teamId         String?
+  name           String
+  date           DateTime
+  venue          String?
+  ageGroup       String?
+  description    String?
+
+  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?                    @relation(fields: [teamId], references: [id])
+  selections   TrialSelectionDocument[]
+}
+
+model TrialSelectionDocument {
+  id           String          @id @default(cuid())
+  trialEventId String
+  athleteId    String
+  status       String          @default("PENDING")
+  notes        String?
+  decidedById  String?
+  decidedAt    DateTime?
+
+  trialEvent TrialEvent @relation(fields: [trialEventId], references: [id], onDelete: Cascade)
+  athlete    User       @relation("AthleteSelection", fields: [athleteId], references: [id], onDelete: Cascade)
+  decidedBy  User?      @relation("DeciderSelection", fields: [decidedById], references: [id])
+
+  @@unique([trialEventId, athleteId])
+}
+
+// ---------- Resource sharing ----------
+
+model Resource {
+  id             String           @id @default(cuid())
+  organizationId String
+  name           String
+  category       String
+  quantityTotal  Int              @default(1)
+  notes          String?
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookings     ResourceBooking[]
+}
+
+model ResourceBooking {
+  id            String        @id @default(cuid())
+  resourceId    String
+  teamId        String?
+  requestedById String
+  startsAt      DateTime
+  endsAt        DateTime
+  quantity      Int           @default(1)
+  status        String        @default("REQUESTED")
+  purpose       String?
+
+  resource    Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  team        Team?    @relation(fields: [teamId], references: [id])
+  requestedBy User     @relation(fields: [requestedById], references: [id])
+}
