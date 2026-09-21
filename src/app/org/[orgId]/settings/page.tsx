@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
-import { Badge, Button, Card, CardBody, CardHeader, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, CardBody, CardHeader, Field, Input, PageHeader } from "@/components/ui";
 import { updatePlanAction } from "@/lib/actions/settings";
+import { resetBrandColorAction, updateBrandingAction } from "@/lib/actions/branding";
 import { isAdmin, ORG_TYPE_LABELS, ROLE_LABELS } from "@/lib/roles";
 import { format } from "date-fns";
 
@@ -22,6 +23,51 @@ export default async function SettingsPage({ params }: { params: Promise<{ orgId
   return (
     <div>
       <PageHeader title="Settings & Plan" subtitle="Organization details and subscription plan." />
+
+      <Card className="mb-6">
+        <CardHeader title="Branding" subtitle="Upload your logo and pick a brand color — it's applied across the whole workspace." />
+        <CardBody>
+          <div className="flex flex-wrap items-start gap-6">
+            <div className="flex items-center gap-3">
+              {org?.logoPath ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={`/api/org-logo/${orgId}?v=${encodeURIComponent(org.logoPath)}`}
+                  alt={`${org.name} logo`}
+                  className="h-16 w-16 rounded-lg border border-slate-200 object-contain"
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-slate-300 text-xs text-slate-400">
+                  No logo
+                </div>
+              )}
+              <div className="h-10 w-10 rounded-lg border border-slate-200" style={{ backgroundColor: org?.brandColor ?? "#166ef2" }} />
+            </div>
+
+            {isAdmin(membership.role) ? (
+              <form action={updateBrandingAction.bind(null, orgId)} className="flex flex-1 flex-wrap items-end gap-4">
+                <Field label="Logo (PNG, JPEG, WebP or SVG, max 2MB)">
+                  <Input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="w-64" />
+                </Field>
+                <Field label="Brand color">
+                  <input type="color" name="brandColor" defaultValue={org?.brandColor ?? "#166ef2"} className="h-10 w-16 rounded border border-slate-300" />
+                </Field>
+                <Button type="submit">Save branding</Button>
+              </form>
+            ) : (
+              <p className="text-sm text-slate-400">Only admins can update branding.</p>
+            )}
+
+            {isAdmin(membership.role) && org?.brandColor && (
+              <form action={resetBrandColorAction.bind(null, orgId)}>
+                <button type="submit" className="text-xs font-medium text-slate-400 hover:text-slate-600 hover:underline">
+                  Reset to default color
+                </button>
+              </form>
+            )}
+          </div>
+        </CardBody>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

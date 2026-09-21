@@ -5,6 +5,7 @@ import { buildNav } from "@/lib/nav";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ORG_TYPE_LABELS, ROLE_LABELS } from "@/lib/roles";
+import { BRAND_SHADE_KEYS, HEX_COLOR_PATTERN, generateBrandShades } from "@/lib/color";
 
 export default async function OrgLayout({
   children,
@@ -19,16 +20,33 @@ export default async function OrgLayout({
   if (!org) notFound();
 
   const groups = buildNav(orgId);
+  const brandOverride = org.brandColor && HEX_COLOR_PATTERN.test(org.brandColor) ? generateBrandShades(org.brandColor) : null;
+  const logoSrc = org.logoPath ? `/api/org-logo/${orgId}?v=${encodeURIComponent(org.logoPath)}` : null;
 
   return (
     <div className="flex min-h-screen bg-slate-50">
+      {brandOverride && (
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `:root{${BRAND_SHADE_KEYS.map((shade) => `--brand-${shade}:${brandOverride[shade]};`).join("")}}`,
+          }}
+        />
+      )}
       <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
         <div className="border-b border-slate-100 px-4 py-4">
           <Link href="/" className="text-sm font-bold text-brand-700">
             Freedom Sports Management
           </Link>
-          <p className="mt-1 truncate text-sm font-medium text-slate-900">{org.name}</p>
-          <p className="text-xs text-slate-400">{ORG_TYPE_LABELS[org.type]}</p>
+          <div className="mt-2 flex items-center gap-2">
+            {logoSrc && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoSrc} alt={`${org.name} logo`} className="h-8 w-8 rounded object-contain" />
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-slate-900">{org.name}</p>
+              <p className="text-xs text-slate-400">{ORG_TYPE_LABELS[org.type]}</p>
+            </div>
+          </div>
         </div>
         <SidebarNav groups={groups} />
         <div className="border-t border-slate-100 px-4 py-3">

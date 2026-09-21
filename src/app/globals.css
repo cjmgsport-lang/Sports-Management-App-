@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Default brand palette (RGB triplets, consumed by tailwind.config.ts as
+ * rgb(var(--brand-600) / <alpha-value>) etc). An organization's dashboard
+ * layout overrides these at :root with a ramp generated from their chosen
+ * brand color — see src/lib/color.ts — so every brand-* utility class
+ * across the app repaints without any component changes.
+ */
+:root {
+  --brand-50: 238 247 255;
+  --brand-100: 217 237 255;
+  --brand-200: 188 224 255;
+  --brand-300: 142 203 255;
+  --brand-400: 87 173 255;
+  --brand-500: 46 140 255;
+  --brand-600: 22 110 242;
+  --brand-700: 17 88 214;
+  --brand-800: 21 72 168;
+  --brand-900: 22 62 132;
+  --brand-950: 15 38 82;
+}
+
 html,
 body {
   height: 100%;

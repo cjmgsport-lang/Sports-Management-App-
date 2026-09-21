@@ -5,18 +5,22 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Resolved through CSS variables (defaulted in globals.css, and
+        // overridden per organization in the dashboard layout) so every
+        // `brand-*` utility class below can be recolored at runtime without
+        // touching a single component.
         brand: {
-          50: "#eef7ff",
-          100: "#d9edff",
-          200: "#bce0ff",
-          300: "#8ecbff",
-          400: "#57adff",
-          500: "#2e8cff",
-          600: "#166ef2",
-          700: "#1158d6",
-          800: "#1548a8",
-          900: "#163e84",
-          950: "#0f2652",
+          50: "rgb(var(--brand-50) / <alpha-value>)",
+          100: "rgb(var(--brand-100) / <alpha-value>)",
+          200: "rgb(var(--brand-200) / <alpha-value>)",
+          300: "rgb(var(--brand-300) / <alpha-value>)",
+          400: "rgb(var(--brand-400) / <alpha-value>)",
+          500: "rgb(var(--brand-500) / <alpha-value>)",
+          600: "rgb(var(--brand-600) / <alpha-value>)",
+          700: "rgb(var(--brand-700) / <alpha-value>)",
+          800: "rgb(var(--brand-800) / <alpha-value>)",
+          900: "rgb(var(--brand-900) / <alpha-value>)",
+          950: "rgb(var(--brand-950) / <alpha-value>)",
         },
       },
       fontFamily: {

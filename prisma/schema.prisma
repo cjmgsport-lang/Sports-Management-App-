@@ -22,12 +22,15 @@ datasource db {
 // ---------- Core tenancy ----------
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  type      String
-  province  String?
-  city      String?
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  name         String
+  type         String
+  province     String?
+  city         String?
+  logoPath     String?
+  logoMimeType String?
+  brandColor   String?
+  createdAt    DateTime @default(now())
 
   subscription Subscription?
   memberships  Membership[]

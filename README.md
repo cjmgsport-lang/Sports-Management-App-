@@ -17,7 +17,7 @@ A subscription sports management platform for schools, clubs, universities, fran
 - **Weekly feedback** — coach feedback plus athlete reflection.
 - **Trials & selection** — trial events and per-athlete selection decisions.
 - **Resource sharing** — booking for fields, balls, cones, poles, mannequins, GPS units and video equipment.
-- **Organization settings** — subscription plan and org details.
+- **Organization settings** — subscription plan, org details, and white-label branding (logo + brand color, applied app-wide).
 
 ## Tech stack
 
