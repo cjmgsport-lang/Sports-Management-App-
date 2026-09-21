@@ -19,6 +19,7 @@ export function buildNav(orgId: string): NavGroup[] {
       label: "Plan & Communicate",
       items: [
         { href: `${base}/calendar`, label: "Calendar", icon: "📅" },
+        { href: `${base}/game-model`, label: "Game Model", icon: "🧠" },
         { href: `${base}/training-plans`, label: "Training Plans", icon: "📈" },
         { href: `${base}/chat`, label: "Chat", icon: "💬" },
         { href: `${base}/noticeboard`, label: "Noticeboard", icon: "📌" },

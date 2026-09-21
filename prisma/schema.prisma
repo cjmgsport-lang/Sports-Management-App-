@@ -137,6 +137,7 @@ model Team {
   resourceBookings ResourceBooking[]
   idps           IndividualDevelopmentPlan[]
   weeklyFeedback WeeklyFeedback[]
+  gamePrinciples GamePrinciple[]
 }
 
 model TeamMembership {
@@ -171,6 +172,24 @@ model CalendarEvent {
 
   team        Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
   createdBy   User @relation(fields: [createdById], references: [id])
+}
+
+// ---------- Tactical periodisation: game model ----------
+// The reference framework everything in training plans hangs off. Each
+// principle belongs to one of the four moments of the game (or set
+// pieces) — see src/lib/tactical-periodization.ts for the vocabulary.
+
+model GamePrinciple {
+  id          String   @id @default(cuid())
+  teamId      String
+  moment      String
+  name        String
+  description String?
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  team   Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  drills Drill[]
 }
 
 // ---------- Periodized training plans ----------
@@ -222,9 +241,14 @@ model Microcycle {
   endDate     DateTime
   theme       String?
   notes       String?
+  // The match this microcycle (morphocycle) is built backward from — lets
+  // each session's matchDayCode (MD-4, MD-3, ...) be shown against a real
+  // fixture instead of just an abstract label.
+  fixtureId   String?
 
   mesocycle Mesocycle         @relation(fields: [mesocycleId], references: [id], onDelete: Cascade)
   team      Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  fixture   Fixture?          @relation(fields: [fixtureId], references: [id])
   sessions  TrainingSession[]
 }
 
@@ -240,6 +264,10 @@ model TrainingSession {
   notes        String?
   createdById  String
   createdAt    DateTime @default(now())
+  // Morphocycle identity for this day — see src/lib/tactical-periodization.ts
+  matchDayCode   String?
+  dominantMoment String?
+  subDynamic     String?
 
   microcycle Microcycle    @relation(fields: [microcycleId], references: [id], onDelete: Cascade)
   createdBy  User          @relation(fields: [createdById], references: [id])
@@ -255,8 +283,15 @@ model Drill {
   description    String?
   durationMin    Int?
   equipment      String?
+  // Tactical periodisation tagging: which moment/principle this exercise
+  // is designed to propensiate, and its space/numbers constraints.
+  moment       String?
+  principleId  String?
+  complexity   String?
+  constraints  String?
 
   organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  principle    GamePrinciple? @relation(fields: [principleId], references: [id])
   sessions     SessionDrill[]
 }
 
@@ -364,6 +399,7 @@ model Fixture {
   template     FixtureTemplate? @relation(fields: [templateId], references: [id])
   result       MatchResult?
   uploads      UploadAsset[]
+  microcycles  Microcycle[]
 }
 
 model MatchResult {

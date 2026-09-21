@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { canCoach } from "@/lib/roles";
+import { COMPLEXITIES, MATCH_DAY_CODES, MOMENTS, SUB_DYNAMICS } from "@/lib/tactical-periodization";
 
 async function assertCanCoach(orgId: string) {
   const { user, membership } = await requireOrgMembership(orgId);
@@ -102,6 +103,7 @@ const microSchema = z.object({
   endDate: z.string().min(1),
   theme: z.string().optional(),
   notes: z.string().optional(),
+  fixtureId: z.string().optional(),
 });
 
 export async function createMicrocycleAction(
@@ -119,6 +121,7 @@ export async function createMicrocycleAction(
     endDate: formData.get("endDate"),
     theme: formData.get("theme") || undefined,
     notes: formData.get("notes") || undefined,
+    fixtureId: formData.get("fixtureId") || undefined,
   });
   await db.microcycle.create({
     data: {
@@ -129,6 +132,7 @@ export async function createMicrocycleAction(
       endDate: new Date(parsed.endDate),
       theme: parsed.theme,
       notes: parsed.notes,
+      fixtureId: parsed.fixtureId || null,
     },
   });
   revalidatePath(`/org/${orgId}/training-plans/${seasonId}`);
@@ -142,6 +146,9 @@ const sessionSchema = z.object({
   focus: z.string().min(2),
   intensityRpe: z.coerce.number().int().min(1).max(10).optional(),
   notes: z.string().optional(),
+  matchDayCode: z.enum(MATCH_DAY_CODES as [string, ...string[]]).optional(),
+  dominantMoment: z.enum(MOMENTS as [string, ...string[]]).optional(),
+  subDynamic: z.enum(SUB_DYNAMICS as [string, ...string[]]).optional(),
 });
 
 export async function createTrainingSessionAction(orgId: string, microcycleId: string, formData: FormData) {
@@ -154,6 +161,9 @@ export async function createTrainingSessionAction(orgId: string, microcycleId: s
     focus: formData.get("focus"),
     intensityRpe: formData.get("intensityRpe") || undefined,
     notes: formData.get("notes") || undefined,
+    matchDayCode: formData.get("matchDayCode") || undefined,
+    dominantMoment: formData.get("dominantMoment") || undefined,
+    subDynamic: formData.get("subDynamic") || undefined,
   });
   await db.trainingSession.create({
     data: {
@@ -165,6 +175,9 @@ export async function createTrainingSessionAction(orgId: string, microcycleId: s
       focus: parsed.focus,
       intensityRpe: parsed.intensityRpe,
       notes: parsed.notes,
+      matchDayCode: parsed.matchDayCode,
+      dominantMoment: parsed.dominantMoment,
+      subDynamic: parsed.subDynamic,
       createdById: user.id,
     },
   });
@@ -177,6 +190,10 @@ const drillSchema = z.object({
   description: z.string().optional(),
   durationMin: z.coerce.number().int().min(1).optional(),
   equipment: z.string().optional(),
+  moment: z.enum(MOMENTS as [string, ...string[]]).optional(),
+  principleId: z.string().optional(),
+  complexity: z.enum(COMPLEXITIES as [string, ...string[]]).optional(),
+  constraints: z.string().optional(),
 });
 
 export async function createDrillAction(orgId: string, formData: FormData) {
@@ -187,8 +204,14 @@ export async function createDrillAction(orgId: string, formData: FormData) {
     description: formData.get("description") || undefined,
     durationMin: formData.get("durationMin") || undefined,
     equipment: formData.get("equipment") || undefined,
+    moment: formData.get("moment") || undefined,
+    principleId: formData.get("principleId") || undefined,
+    complexity: formData.get("complexity") || undefined,
+    constraints: formData.get("constraints") || undefined,
   });
-  await db.drill.create({ data: { organizationId: orgId, ...parsed } });
+  await db.drill.create({
+    data: { organizationId: orgId, ...parsed, principleId: parsed.principleId || null },
+  });
   revalidatePath(`/org/${orgId}/training-plans`);
 }
 

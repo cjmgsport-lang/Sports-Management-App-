@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
-import { Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, LinkButton, PageHeader, Select, Textarea } from "@/components/ui";
 import { createSeasonAction, createDrillAction } from "@/lib/actions/training-plans";
+import { COMPLEXITY_LABELS, COMPLEXITIES, MOMENT_COLORS, MOMENT_SHORT_LABELS, MOMENTS } from "@/lib/tactical-periodization";
 import { format } from "date-fns";
 
 export default async function TrainingPlansPage({ params }: { params: Promise<{ orgId: string }> }) {
@@ -15,14 +16,29 @@ export default async function TrainingPlansPage({ params }: { params: Promise<{ 
     include: { team: true, macrocycles: { include: { mesocycles: { include: { microcycles: true } } } } },
     orderBy: { startDate: "desc" },
   });
-  const drills = await db.drill.findMany({ where: { organizationId: orgId }, orderBy: { name: "asc" } });
+  const drills = await db.drill.findMany({
+    where: { organizationId: orgId },
+    include: { principle: true },
+    orderBy: { name: "asc" },
+  });
+  const principles = await db.gamePrinciple.findMany({
+    where: { team: { organizationId: orgId } },
+    include: { team: true },
+    orderBy: [{ team: { name: "asc" } }, { moment: "asc" }, { orderIndex: "asc" }],
+  });
 
   return (
     <div>
       <PageHeader
         title="Periodised Training Plans"
-        subtitle="Season macrocycles, mesocycles and weekly microcycles, right down to individual sessions."
+        subtitle="Built on tactical periodisation: macrocycles and mesocycles introduce game-model principles, weekly microcycles are morphocycles built backward from the next match."
+        action={<LinkButton href={`/org/${orgId}/game-model`} variant="secondary">Game Model</LinkButton>}
       />
+      {principles.length === 0 && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          No game model defined yet. <Link href={`/org/${orgId}/game-model`} className="font-medium underline">Define your principles of play</Link> first — every drill below should serve one of them.
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
@@ -55,7 +71,7 @@ export default async function TrainingPlansPage({ params }: { params: Promise<{ 
           )}
 
           <Card>
-            <CardHeader title="Drill library" subtitle="Reusable drills you can add to any training session." />
+            <CardHeader title="Drill library" subtitle="Every exercise should be designed to propensiate one game-model principle — never decontextualised physical training." />
             <CardBody>
               {drills.length === 0 ? (
                 <p className="text-sm text-slate-400">No drills yet — add some using the form.</p>
@@ -64,9 +80,13 @@ export default async function TrainingPlansPage({ params }: { params: Promise<{ 
                   {drills.map((d) => (
                     <li key={d.id} className="rounded-lg border border-slate-100 px-3 py-2 text-sm">
                       <p className="font-medium text-slate-800">{d.name}</p>
-                      <p className="text-slate-400">
-                        {d.category ?? "General"} {d.durationMin ? `· ${d.durationMin} min` : ""}
-                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {d.moment && <Badge color={MOMENT_COLORS[d.moment as keyof typeof MOMENT_COLORS]}>{MOMENT_SHORT_LABELS[d.moment as keyof typeof MOMENT_SHORT_LABELS]}</Badge>}
+                        {d.complexity && <Badge>{COMPLEXITY_LABELS[d.complexity as keyof typeof COMPLEXITY_LABELS]}</Badge>}
+                        {d.durationMin && <Badge color="slate">{d.durationMin} min</Badge>}
+                      </div>
+                      {d.principle && <p className="mt-1 text-xs text-slate-500">Targets: {d.principle.name}</p>}
+                      {d.constraints && <p className="mt-1 text-xs text-slate-400">{d.constraints}</p>}
                     </li>
                   ))}
                 </ul>
@@ -108,25 +128,63 @@ export default async function TrainingPlansPage({ params }: { params: Promise<{ 
           </Card>
 
           <Card>
-            <CardHeader title="New drill" />
+            <CardHeader title="New drill" subtitle="Tag it with the moment and principle it's designed to develop." />
             <CardBody>
               <form action={createDrillAction.bind(null, orgId)} className="space-y-3">
                 <Field label="Name">
-                  <Input name="name" required placeholder="Small-sided possession" />
+                  <Input name="name" required placeholder="4v4+2 possession, switch to press" />
+                </Field>
+                <Field label="Moment of the game">
+                  <Select name="moment" defaultValue="">
+                    <option value="">— Not tagged —</option>
+                    {MOMENTS.map((m) => (
+                      <option key={m} value={m}>
+                        {MOMENT_SHORT_LABELS[m]}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Principle it targets">
+                  <Select name="principleId" defaultValue="">
+                    <option value="">— None —</option>
+                    {teams.map((t) => {
+                      const teamPrinciples = principles.filter((p) => p.teamId === t.id);
+                      if (teamPrinciples.length === 0) return null;
+                      return (
+                        <optgroup key={t.id} label={t.name}>
+                          {teamPrinciples.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {MOMENT_SHORT_LABELS[p.moment as keyof typeof MOMENT_SHORT_LABELS]} · {p.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
+                  </Select>
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Category">
-                    <Input name="category" placeholder="Tactical" />
+                  <Field label="Complexity">
+                    <Select name="complexity" defaultValue="">
+                      <option value="">—</option>
+                      {COMPLEXITIES.map((c) => (
+                        <option key={c} value={c}>
+                          {COMPLEXITY_LABELS[c]}
+                        </option>
+                      ))}
+                    </Select>
                   </Field>
                   <Field label="Duration (min)">
                     <Input type="number" name="durationMin" min={1} />
                   </Field>
                 </div>
+                <Field label="Constraints">
+                  <Input name="constraints" placeholder="e.g. 4v4+2 GKs, 30x20m, max 3 touches" />
+                </Field>
                 <Field label="Equipment">
                   <Input name="equipment" placeholder="Cones, poles, mannequins" />
                 </Field>
                 <Field label="Description">
-                  <Textarea name="description" rows={2} />
+                  <Textarea name="description" rows={2} placeholder="What behaviour should emerge?" />
                 </Field>
                 <Button type="submit" className="w-full">
                   Add drill

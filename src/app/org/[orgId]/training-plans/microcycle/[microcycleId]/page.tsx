@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Textarea } from "@/components/ui";
+import { MorphocycleStrip } from "@/components/morphocycle-strip";
+import { MorphocycleSessionFields } from "@/components/morphocycle-session-fields";
 import { addSessionDrillAction, createTrainingSessionAction } from "@/lib/actions/training-plans";
+import { MATCH_DAY_LABELS, MOMENT_COLORS, MOMENT_SHORT_LABELS, SUB_DYNAMIC_LABELS, matchDaySortIndex } from "@/lib/tactical-periodization";
 import { format } from "date-fns";
 
 export default async function MicrocyclePage({
@@ -18,6 +21,7 @@ export default async function MicrocyclePage({
     where: { id: microcycleId, mesocycle: { macrocycle: { season: { organizationId: orgId } } } },
     include: {
       team: true,
+      fixture: true,
       mesocycle: { include: { macrocycle: { include: { season: true } } } },
       sessions: {
         orderBy: { date: "asc" },
@@ -29,12 +33,15 @@ export default async function MicrocyclePage({
 
   const drills = await db.drill.findMany({ where: { organizationId: orgId }, orderBy: { name: "asc" } });
   const season = microcycle.mesocycle.macrocycle.season;
+  const sortedSessions = [...microcycle.sessions].sort((a, b) => matchDaySortIndex(a.matchDayCode) - matchDaySortIndex(b.matchDayCode));
 
   return (
     <div>
       <PageHeader
         title={`Week ${microcycle.weekNumber}${microcycle.theme ? ` · ${microcycle.theme}` : ""}`}
-        subtitle={`${microcycle.team.name} · ${format(microcycle.startDate, "d MMM")} – ${format(microcycle.endDate, "d MMM yyyy")}`}
+        subtitle={`${microcycle.team.name} · ${format(microcycle.startDate, "d MMM")} – ${format(microcycle.endDate, "d MMM yyyy")}${
+          microcycle.fixture ? ` · Building toward vs ${microcycle.fixture.opponent} (${format(microcycle.fixture.startsAt, "d MMM")})` : ""
+        }`}
         action={
           <Link href={`/org/${orgId}/training-plans/${season.id}`} className="text-sm text-brand-600 hover:underline">
             ← Back to {season.name}
@@ -44,15 +51,33 @@ export default async function MicrocyclePage({
 
       {microcycle.notes && <p className="mb-4 text-sm text-slate-500">{microcycle.notes}</p>}
 
+      <Card className="mb-6">
+        <CardHeader title="Morphocycle" subtitle="The standard weekly structure, built backward from the next match." />
+        <CardBody>
+          <MorphocycleStrip sessions={microcycle.sessions} />
+        </CardBody>
+      </Card>
+
       <div className="space-y-4">
         {microcycle.sessions.length === 0 && <EmptyState title="No sessions yet" subtitle="Add this week's first training session below." />}
 
-        {microcycle.sessions.map((s) => (
+        {sortedSessions.map((s) => (
           <Card key={s.id}>
             <CardHeader
               title={`${format(s.date, "EEE d MMM")} · ${s.focus}`}
               subtitle={`${s.startTime ?? ""}${s.endTime ? `–${s.endTime}` : ""} ${s.location ? `· ${s.location}` : ""}`}
-              action={s.intensityRpe ? <Badge color="amber">RPE {s.intensityRpe}</Badge> : undefined}
+              action={
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  {s.matchDayCode && <Badge color="slate">{MATCH_DAY_LABELS[s.matchDayCode as keyof typeof MATCH_DAY_LABELS]}</Badge>}
+                  {s.dominantMoment && (
+                    <Badge color={MOMENT_COLORS[s.dominantMoment as keyof typeof MOMENT_COLORS]}>
+                      {MOMENT_SHORT_LABELS[s.dominantMoment as keyof typeof MOMENT_SHORT_LABELS]}
+                    </Badge>
+                  )}
+                  {s.subDynamic && <Badge color="amber">{SUB_DYNAMIC_LABELS[s.subDynamic as keyof typeof SUB_DYNAMIC_LABELS]}</Badge>}
+                  {s.intensityRpe && <Badge color="amber">RPE {s.intensityRpe}</Badge>}
+                </div>
+              }
             />
             <CardBody>
               {s.notes && <p className="mb-3 text-sm text-slate-500">{s.notes}</p>}
@@ -100,7 +125,7 @@ export default async function MicrocyclePage({
         ))}
 
         <Card>
-          <CardHeader title="New session" />
+          <CardHeader title="New session" subtitle="Give the day its morphocycle identity — a match-day code, dominant moment and sub-dynamic." />
           <CardBody>
             <form action={createTrainingSessionAction.bind(null, orgId, microcycleId)} className="grid gap-3 sm:grid-cols-3">
               <Field label="Date">
@@ -112,8 +137,9 @@ export default async function MicrocyclePage({
               <Field label="End time">
                 <Input type="time" name="endTime" />
               </Field>
+              <MorphocycleSessionFields />
               <Field label="Focus">
-                <Input name="focus" required placeholder="e.g. Aerobic capacity" className="sm:col-span-2" />
+                <Input name="focus" required placeholder="e.g. Build-up through wide areas vs mid-block" className="sm:col-span-2" />
               </Field>
               <Field label="RPE (1-10)">
                 <Input type="number" name="intensityRpe" min={1} max={10} />

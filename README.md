@@ -5,7 +5,7 @@ A subscription sports management platform for schools, clubs, universities, fran
 ## Modules
 
 - **Editable calendars** — team schedules for training, matches, meetings and travel.
-- **Periodised training plans** — seasons broken into macrocycles → mesocycles → weekly microcycles → individual sessions, with a shared drill library.
+- **Training plans, built on tactical periodisation** — a per-team **Game Model** (principles of play under the four moments: offensive organization, defensive organization, attacking transition, defensive transition, plus set pieces) that every drill is tagged against; seasons run macrocycles → mesocycles → weekly **morphocycles** (microcycles built backward from the next match with MD-4…MD-1 match-day codes, a dominant moment and sub-dynamic per day — duration → speed-endurance → speed → activation) → individual sessions.
 - **Chat** — per-team channels.
 - **Noticeboard** — pinned announcements targeted by audience (coaches / parents / athletes / staff).
 - **Fixtures, tournaments & results** — fixture templates, tournaments, fixtures and result capture.

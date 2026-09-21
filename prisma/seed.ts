@@ -91,50 +91,8 @@ async function main() {
     ],
   });
 
-  // Training plan: season -> macro -> meso -> micro -> session -> drills
-  const season = await db.season.create({
-    data: { organizationId: org.id, teamId: team.id, name: "2026 Season", startDate: new Date("2026-01-15"), endDate: new Date("2026-09-30") },
-  });
-  const macro = await db.macrocycle.create({
-    data: { seasonId: season.id, name: "Pre-season", focus: "General preparation", startDate: new Date("2026-01-15"), endDate: new Date("2026-02-28") },
-  });
-  const meso = await db.mesocycle.create({
-    data: { macrocycleId: macro.id, name: "Base fitness block", focus: "Aerobic base", startDate: new Date("2026-01-15"), endDate: new Date("2026-02-04") },
-  });
-  const micro = await db.microcycle.create({
-    data: { mesocycleId: meso.id, teamId: team.id, weekNumber: 1, startDate: new Date("2026-01-15"), endDate: new Date("2026-01-21"), theme: "Aerobic capacity" },
-  });
-  const drill1 = await db.drill.create({
-    data: { organizationId: org.id, name: "Small-sided possession", category: "Tactical", durationMin: 15, equipment: "Cones, poles" },
-  });
-  const drill2 = await db.drill.create({
-    data: { organizationId: org.id, name: "Repeated sprint ability", category: "Physical", durationMin: 20, equipment: "Cones, GPS" },
-  });
-  const session = await db.trainingSession.create({
-    data: { microcycleId: micro.id, date: new Date("2026-01-15"), startTime: "15:30", endTime: "17:00", focus: "Aerobic capacity + technical", intensityRpe: 6, createdById: coach.id },
-  });
-  await db.sessionDrill.createMany({
-    data: [
-      { sessionId: session.id, drillId: drill1.id, orderIndex: 0, durationMin: 15 },
-      { sessionId: session.id, drillId: drill2.id, orderIndex: 1, durationMin: 20 },
-    ],
-  });
-
-  // Chat
-  const channel = await db.chatChannel.create({ data: { teamId: team.id, name: "general", isGeneral: true } });
-  await db.chatMessage.createMany({
-    data: [
-      { channelId: channel.id, authorId: coach.id, body: "Welcome to the 2026 season! Training starts Tuesday." },
-      { channelId: channel.id, authorId: athlete1.id, body: "Looking forward to it, coach!" },
-    ],
-  });
-
-  // Noticeboard
-  await db.notice.create({
-    data: { organizationId: org.id, teamId: team.id, authorId: coach.id, title: "Kit collection this Friday", body: "Please collect your training kit from the sports office before Friday 3pm.", audience: "ALL", pinned: true },
-  });
-
-  // Fixtures / tournaments
+  // Fixtures / tournaments (created first so the morphocycle below can
+  // build backward from a real match date)
   const template = await db.fixtureTemplate.create({
     data: { organizationId: org.id, name: "League match", sport: "Hockey", defaultDurationMin: 70, defaultVenue: "Home ground" },
   });
@@ -153,6 +111,196 @@ async function main() {
       startsAt: new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000),
       status: "SCHEDULED",
     },
+  });
+
+  // Game model: the principles every drill and session below is designed
+  // to serve, organised by the four moments of the game (+ set pieces).
+  const principleDefs: { moment: string; name: string; description: string }[] = [
+    { moment: "OFFENSIVE_ORGANIZATION", name: "Build-up through the wide channels", description: "Switch play early to draw the press wide, then attack the D at pace." },
+    { moment: "OFFENSIVE_ORGANIZATION", name: "Overload the D on entry", description: "Third attacker arrives late into the circle as the ball is played in." },
+    { moment: "DEFENSIVE_ORGANIZATION", name: "Mid-block press, trigger on backward pass", description: "Press as a unit the moment the opponent plays backward or sideways in our half." },
+    { moment: "DEFENSIVE_ORGANIZATION", name: "Compact shape inside our 23", description: "Deny central passing lanes; force play to the outside channels." },
+    { moment: "ATTACKING_TRANSITION", name: "Immediate forward pass after winning the ball", description: "First touch forward, not sideways — attack the space before their shape resets." },
+    { moment: "DEFENSIVE_TRANSITION", name: "Nearest player delays, second recovers depth", description: "Stop the counter immediately; don't let the first mistake become a second." },
+    { moment: "SET_PIECES", name: "Short corner variation from the top", description: "Direct shot or slip to the deflector depending on the keeper's set-up." },
+  ];
+  const principles = await Promise.all(
+    principleDefs.map((p, i) => db.gamePrinciple.create({ data: { teamId: team.id, moment: p.moment, name: p.name, description: p.description, orderIndex: i } }))
+  );
+  const [buildUpWide, , midBlockPress, , forwardAfterWin, , shortCornerTop] = principles;
+
+  // Training plan: season -> macrocycle -> mesocycle -> microcycle
+  // (morphocycle) -> sessions, tagged with tactical-periodisation fields.
+  const season = await db.season.create({
+    data: { organizationId: org.id, teamId: team.id, name: "2026 Season", startDate: new Date("2026-01-15"), endDate: new Date("2026-09-30") },
+  });
+  const macro = await db.macrocycle.create({
+    data: {
+      seasonId: season.id,
+      name: "Pre-season",
+      focus: "Introduce defensive organization (mid-block press) and build-up principles",
+      startDate: new Date("2026-01-15"),
+      endDate: new Date("2026-02-28"),
+    },
+  });
+  const meso = await db.mesocycle.create({
+    data: {
+      macrocycleId: macro.id,
+      name: "Foundations block",
+      focus: "Mid-block press trigger + build-up through the wide channels",
+      startDate: new Date("2026-01-15"),
+      endDate: new Date("2026-02-04"),
+    },
+  });
+
+  const weekStart = new Date(fixture.startsAt.getTime() - 5 * 24 * 60 * 60 * 1000);
+  const weekEnd = new Date(fixture.startsAt.getTime());
+  const micro = await db.microcycle.create({
+    data: {
+      mesocycleId: meso.id,
+      teamId: team.id,
+      weekNumber: 2,
+      startDate: weekStart,
+      endDate: weekEnd,
+      theme: "Mid-block press + build-up through the wide channels",
+      fixtureId: fixture.id,
+    },
+  });
+
+  const drill1 = await db.drill.create({
+    data: {
+      organizationId: org.id,
+      name: "4v4+2 possession, press trigger on backward pass",
+      category: "Tactical",
+      durationMin: 20,
+      equipment: "Cones, poles, bibs",
+      moment: "DEFENSIVE_ORGANIZATION",
+      principleId: midBlockPress.id,
+      complexity: "HIGH",
+      constraints: "4v4+2 floaters, 30x25m, press triggers only on a backward pass",
+    },
+  });
+  const drill2 = await db.drill.create({
+    data: {
+      organizationId: org.id,
+      name: "Wide overload to circle entry, 6v5",
+      category: "Tactical",
+      durationMin: 18,
+      equipment: "Cones, mannequins, GPS",
+      moment: "OFFENSIVE_ORGANIZATION",
+      principleId: buildUpWide.id,
+      complexity: "MEDIUM",
+      constraints: "6v5 into a full-width channel + D, third attacker arrives late",
+    },
+  });
+  const drill3 = await db.drill.create({
+    data: {
+      organizationId: org.id,
+      name: "Turnover to first forward pass, 3v3",
+      category: "Tactical",
+      durationMin: 12,
+      equipment: "Cones",
+      moment: "ATTACKING_TRANSITION",
+      principleId: forwardAfterWin.id,
+      complexity: "MEDIUM",
+      constraints: "3v3 in a 20x15m grid, reward a forward pass within 2 touches of winning the ball",
+    },
+  });
+  const drill4 = await db.drill.create({
+    data: {
+      organizationId: org.id,
+      name: "Short corner variations vs keeper + 3",
+      category: "Set pieces",
+      durationMin: 15,
+      equipment: "Balls, cones",
+      moment: "SET_PIECES",
+      principleId: shortCornerTop.id,
+      complexity: "LOW",
+      constraints: "Live reps vs a keeper and 3 defenders, rotate the top-of-circle option each rep",
+    },
+  });
+
+  const sessionDuration = await db.trainingSession.create({
+    data: {
+      microcycleId: micro.id,
+      date: new Date(weekStart),
+      startTime: "15:30",
+      endTime: "17:15",
+      focus: "Defensive organization: mid-block press, and build-up through the wide channels",
+      intensityRpe: 6,
+      matchDayCode: "MD_MINUS_4",
+      dominantMoment: "DEFENSIVE_ORGANIZATION",
+      subDynamic: "DURATION",
+      createdById: coach.id,
+    },
+  });
+  await db.sessionDrill.createMany({
+    data: [
+      { sessionId: sessionDuration.id, drillId: drill1.id, orderIndex: 0, durationMin: 20 },
+      { sessionId: sessionDuration.id, drillId: drill2.id, orderIndex: 1, durationMin: 18 },
+    ],
+  });
+
+  const sessionSpeedEndurance = await db.trainingSession.create({
+    data: {
+      microcycleId: micro.id,
+      date: new Date(weekStart.getTime() + 1 * 24 * 60 * 60 * 1000),
+      startTime: "15:30",
+      endTime: "16:45",
+      focus: "Attacking transition: immediate forward pass after winning the ball",
+      intensityRpe: 7,
+      matchDayCode: "MD_MINUS_3",
+      dominantMoment: "ATTACKING_TRANSITION",
+      subDynamic: "SPEED_ENDURANCE",
+      createdById: coach.id,
+    },
+  });
+  await db.sessionDrill.create({ data: { sessionId: sessionSpeedEndurance.id, drillId: drill3.id, orderIndex: 0, durationMin: 12 } });
+
+  const sessionSpeed = await db.trainingSession.create({
+    data: {
+      microcycleId: micro.id,
+      date: new Date(weekStart.getTime() + 2 * 24 * 60 * 60 * 1000),
+      startTime: "15:30",
+      endTime: "16:30",
+      focus: "Overload the D on entry — sharp, high-speed circle entries",
+      intensityRpe: 8,
+      matchDayCode: "MD_MINUS_2",
+      dominantMoment: "OFFENSIVE_ORGANIZATION",
+      subDynamic: "SPEED",
+      createdById: coach.id,
+    },
+  });
+  await db.sessionDrill.create({ data: { sessionId: sessionSpeed.id, drillId: drill2.id, orderIndex: 0, durationMin: 15 } });
+
+  const sessionActivation = await db.trainingSession.create({
+    data: {
+      microcycleId: micro.id,
+      date: new Date(weekStart.getTime() + 3 * 24 * 60 * 60 * 1000),
+      startTime: "15:30",
+      endTime: "16:00",
+      focus: "Set pieces walkthrough + tactical review — no residual fatigue",
+      intensityRpe: 3,
+      matchDayCode: "MD_MINUS_1",
+      dominantMoment: "SET_PIECES",
+      subDynamic: "ACTIVATION",
+      createdById: coach.id,
+    },
+  });
+  await db.sessionDrill.create({ data: { sessionId: sessionActivation.id, drillId: drill4.id, orderIndex: 0, durationMin: 15 } });
+
+  // Chat
+  const channel = await db.chatChannel.create({ data: { teamId: team.id, name: "general", isGeneral: true } });
+  await db.chatMessage.createMany({
+    data: [
+      { channelId: channel.id, authorId: coach.id, body: "Welcome to the 2026 season! Training starts Tuesday." },
+      { channelId: channel.id, authorId: athlete1.id, body: "Looking forward to it, coach!" },
+    ],
+  });
+
+  // Noticeboard
+  await db.notice.create({
+    data: { organizationId: org.id, teamId: team.id, authorId: coach.id, title: "Kit collection this Friday", body: "Please collect your training kit from the sports office before Friday 3pm.", audience: "ALL", pinned: true },
   });
 
   // Clothing

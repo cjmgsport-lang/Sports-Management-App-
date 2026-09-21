@@ -23,13 +23,24 @@ export default async function SeasonPage({
         include: {
           mesocycles: {
             orderBy: { startDate: "asc" },
-            include: { microcycles: { orderBy: { weekNumber: "asc" }, include: { _count: { select: { sessions: true } } } } },
+            include: {
+              microcycles: {
+                orderBy: { weekNumber: "asc" },
+                include: { _count: { select: { sessions: true } }, fixture: true },
+              },
+            },
           },
         },
       },
     },
   });
   if (!season) notFound();
+
+  const upcomingFixtures = await db.fixture.findMany({
+    where: { teamId: season.teamId, status: "SCHEDULED" },
+    orderBy: { startsAt: "asc" },
+    take: 12,
+  });
 
   return (
     <div>
@@ -54,7 +65,7 @@ export default async function SeasonPage({
                       <div>
                         <p className="font-medium text-slate-800">{meso.name}</p>
                         <p className="text-xs text-slate-400">
-                          {meso.focus ?? "General preparation"} · {format(meso.startDate, "d MMM")} – {format(meso.endDate, "d MMM yyyy")}
+                          {meso.focus ?? "No principles specified yet"} · {format(meso.startDate, "d MMM")} – {format(meso.endDate, "d MMM yyyy")}
                         </p>
                       </div>
                     </div>
@@ -72,20 +83,33 @@ export default async function SeasonPage({
                           <p className="text-xs text-slate-400">
                             {format(micro.startDate, "d MMM")} – {format(micro.endDate, "d MMM")} · {micro._count.sessions} sessions
                           </p>
+                          {micro.fixture && (
+                            <p className="text-xs text-brand-600">
+                              Building toward: vs {micro.fixture.opponent} ({format(micro.fixture.startsAt, "d MMM")})
+                            </p>
+                          )}
                         </Link>
                       ))}
                     </div>
 
                     <details className="mt-3">
-                      <summary className="cursor-pointer text-xs font-medium text-brand-600">+ Add weekly microcycle</summary>
+                      <summary className="cursor-pointer text-xs font-medium text-brand-600">+ Add weekly morphocycle</summary>
                       <form
                         action={createMicrocycleAction.bind(null, orgId, seasonId, meso.id, season.teamId)}
-                        className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5"
+                        className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-6"
                       >
                         <Input name="weekNumber" type="number" min={1} placeholder="Week #" required className="col-span-1" />
                         <Input name="startDate" type="date" required className="col-span-1" />
                         <Input name="endDate" type="date" required className="col-span-1" />
                         <Input name="theme" placeholder="Theme (e.g. Speed)" className="col-span-1" />
+                        <select name="fixtureId" defaultValue="" className="col-span-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                          <option value="">No fixture</option>
+                          {upcomingFixtures.map((f) => (
+                            <option key={f.id} value={f.id}>
+                              vs {f.opponent} ({format(f.startsAt, "d MMM")})
+                            </option>
+                          ))}
+                        </select>
                         <Button type="submit" size="sm" className="col-span-1">
                           Add
                         </Button>
@@ -102,7 +126,7 @@ export default async function SeasonPage({
                   className="mt-2 grid gap-2 sm:grid-cols-4"
                 >
                   <Input name="name" placeholder="Mesocycle name" required />
-                  <Input name="focus" placeholder="Focus" />
+                  <Input name="focus" placeholder="e.g. Mid-block press + build-up through wide areas" />
                   <Input name="startDate" type="date" required />
                   <div className="flex gap-2">
                     <Input name="endDate" type="date" required />
@@ -117,14 +141,17 @@ export default async function SeasonPage({
         ))}
 
         <Card>
-          <CardHeader title="New macrocycle" subtitle="A macrocycle is a large phase of the season (e.g. Pre-season, In-season, Peak, Taper)." />
+          <CardHeader
+            title="New macrocycle"
+            subtitle="A macrocycle is a phase of the season defined by which game-model principles it introduces or consolidates — not by physical qualities."
+          />
           <CardBody>
             <form action={createMacrocycleAction.bind(null, orgId, seasonId)} className="grid gap-3 sm:grid-cols-4">
               <Field label="Name">
                 <Input name="name" required placeholder="Pre-season" />
               </Field>
               <Field label="Focus">
-                <Input name="focus" placeholder="General preparation" />
+                <Input name="focus" placeholder="e.g. Introduce defensive organization principles" />
               </Field>
               <Field label="Start date">
                 <Input type="date" name="startDate" required />
