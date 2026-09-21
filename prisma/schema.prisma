@@ -68,6 +68,15 @@ model Subscription {
   trialEndsAt    DateTime?
   renewsAt       DateTime?
   createdAt      DateTime           @default(now())
+
+  // Paystack billing — set once a checkout completes or a webhook fires.
+  // paystackEmailToken is required by Paystack's /subscription/disable
+  // endpoint (separate from our server's secret key).
+  paystackCustomerCode     String?
+  paystackSubscriptionCode String?
+  paystackPlanCode         String?
+  paystackEmailToken       String?
+  lastPaystackReference    String?
 }
 
 model User {

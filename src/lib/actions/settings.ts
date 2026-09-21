@@ -1,16 +1,28 @@
 "use server";
 
-import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { isAdmin } from "@/lib/roles";
+import { disableSubscription } from "@/lib/paystack";
 
-export async function updatePlanAction(orgId: string, formData: FormData) {
+/** Downgrades to the free Starter plan — cancels any live Paystack subscription first. */
+export async function switchToFreeAction(orgId: string) {
   const { membership } = await requireOrgMembership(orgId);
   if (!isAdmin(membership.role)) throw new Error("Only admins can change the subscription plan.");
 
-  const plan = z.enum(["STARTER", "GROWTH", "PRO", "ENTERPRISE"]).parse(formData.get("plan"));
-  await db.subscription.update({ where: { organizationId: orgId }, data: { plan, status: "ACTIVE" } });
+  const subscription = await db.subscription.findUnique({ where: { organizationId: orgId } });
+  if (subscription?.paystackSubscriptionCode && subscription.paystackEmailToken) {
+    try {
+      await disableSubscription(subscription.paystackSubscriptionCode, subscription.paystackEmailToken);
+    } catch (err) {
+      console.error("Failed to disable Paystack subscription:", err);
+    }
+  }
+
+  await db.subscription.update({
+    where: { organizationId: orgId },
+    data: { plan: "STARTER", status: "ACTIVE", paystackSubscriptionCode: null, paystackEmailToken: null },
+  });
   revalidatePath(`/org/${orgId}/settings`);
 }
