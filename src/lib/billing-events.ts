@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { seatLimitForPlan } from "@/lib/plan-limits";
 
 // Applies the effect of a Paystack transaction/charge/subscription event to
 // our Subscription row. Called from two places:
@@ -76,6 +77,7 @@ export async function applyChargeSuccess(data: PaystackEventData) {
     data: {
       plan,
       status: "ACTIVE",
+      seats: seatLimitForPlan(plan),
       paystackCustomerCode: data.customer?.customer_code ?? subscription.paystackCustomerCode,
       paystackPlanCode: resolvePlanCode(data.plan) ?? subscription.paystackPlanCode,
       lastPaystackReference: data.reference ?? subscription.lastPaystackReference,

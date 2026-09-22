@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { slugify } from "@/lib/slug";
+import { PLAN_SEAT_LIMITS } from "@/lib/plan-limits";
 
 const signupSchema = z.object({
   orgName: z.string().min(2, "Organization name is required"),
@@ -38,16 +40,25 @@ export async function signupAction(formData: FormData): Promise<void> {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
+  const baseSlug = slugify(orgName);
+  let slug = baseSlug;
+  let suffix = 1;
+  while (await db.organization.findUnique({ where: { slug } })) {
+    suffix += 1;
+    slug = `${baseSlug}-${suffix}`;
+  }
+
   const org = await db.organization.create({
     data: {
       name: orgName,
       type: orgType,
       city,
+      slug,
       subscription: {
         create: {
           plan: "STARTER",
           status: "TRIALING",
-          seats: 25,
+          seats: PLAN_SEAT_LIMITS.STARTER,
           trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         },
       },

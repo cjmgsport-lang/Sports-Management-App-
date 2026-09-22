@@ -54,3 +54,15 @@ export async function resetBrandColorAction(orgId: string) {
   await db.organization.update({ where: { id: orgId }, data: { brandColor: null } });
   revalidatePath(`/org/${orgId}`, "layout");
 }
+
+/** Updates the short public-facing description shown on the org's public page (/o/[slug]). */
+export async function updatePublicPageAction(orgId: string, formData: FormData) {
+  const { membership } = await requireOrgMembership(orgId);
+  if (!isAdmin(membership.role)) {
+    throw new Error("Only admins can update the public page.");
+  }
+
+  const publicDescription = z.string().max(500).optional().parse(formData.get("publicDescription") || undefined);
+  await db.organization.update({ where: { id: orgId }, data: { publicDescription: publicDescription ?? null } });
+  revalidatePath(`/org/${orgId}/settings`);
+}

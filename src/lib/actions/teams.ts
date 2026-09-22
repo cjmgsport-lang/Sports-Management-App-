@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { isAdmin } from "@/lib/roles";
+import { seatLimitForPlan } from "@/lib/plan-limits";
 
 const createTeamSchema = z.object({
   name: z.string().min(2),
@@ -68,6 +69,21 @@ export async function addTeamMemberAction(orgId: string, teamId: string, formDat
   const email = parsed.email.toLowerCase().trim();
 
   let user = await db.user.findUnique({ where: { email } });
+  const isNewOrgMember = !user || !(await db.membership.findUnique({
+    where: { userId_organizationId: { userId: user.id, organizationId: orgId } },
+  }));
+
+  if (isNewOrgMember) {
+    const subscription = await db.subscription.findUnique({ where: { organizationId: orgId } });
+    const seatLimit = subscription ? subscription.seats : seatLimitForPlan("STARTER");
+    const seatsUsed = await db.membership.count({ where: { organizationId: orgId } });
+    if (seatsUsed >= seatLimit) {
+      throw new Error(
+        `This organization has reached its plan's seat limit (${seatLimit} members). Upgrade the plan in Settings to add more members.`
+      );
+    }
+  }
+
   if (!user) {
     const tempPassword = crypto.randomBytes(9).toString("base64url");
     user = await db.user.create({

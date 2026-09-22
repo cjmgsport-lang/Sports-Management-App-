@@ -131,9 +131,11 @@ export function Field({ label, children }: { label: string; children: React.Reac
 export function Badge({
   children,
   color = "slate",
+  className,
 }: {
   children: React.ReactNode;
   color?: "slate" | "green" | "amber" | "red" | "blue" | "purple";
+  className?: string;
 }) {
   const colors: Record<string, string> = {
     slate: "bg-slate-100 text-slate-700",
@@ -144,7 +146,7 @@ export function Badge({
     purple: "bg-purple-100 text-purple-700",
   };
   return (
-    <span className={clsx("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", colors[color])}>
+    <span className={clsx("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", colors[color], className)}>
       {children}
     </span>
   );

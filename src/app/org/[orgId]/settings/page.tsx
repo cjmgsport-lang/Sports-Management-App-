@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
-import { Badge, Button, Card, CardBody, CardHeader, Field, Input, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, CardBody, CardHeader, Field, Input, PageHeader, Textarea } from "@/components/ui";
 import { switchToFreeAction } from "@/lib/actions/settings";
 import { cancelSubscriptionAction, startCheckoutAction } from "@/lib/actions/billing";
-import { resetBrandColorAction, updateBrandingAction } from "@/lib/actions/branding";
+import { resetBrandColorAction, updateBrandingAction, updatePublicPageAction } from "@/lib/actions/branding";
 import { applyChargeSuccess } from "@/lib/billing-events";
 import { verifyTransaction } from "@/lib/paystack";
 import { isAdmin, ORG_TYPE_LABELS, ROLE_LABELS } from "@/lib/roles";
@@ -116,6 +116,39 @@ export default async function SettingsPage({
         </CardBody>
       </Card>
 
+      <Card className="mb-6">
+        <CardHeader
+          title="Public page"
+          subtitle="A public info page for your community — no login needed. Uses your logo and brand color automatically."
+        />
+        <CardBody>
+          <p className="mb-3 text-sm text-slate-600">
+            Your page:{" "}
+            <a href={`/o/${org?.slug}`} target="_blank" rel="noreferrer" className="font-medium text-brand-600 hover:underline">
+              {process.env.NEXTAUTH_URL ?? ""}/o/{org?.slug}
+            </a>
+          </p>
+          {isAdmin(membership.role) ? (
+            <form action={updatePublicPageAction.bind(null, orgId)} className="space-y-3">
+              <Field label="Public description (optional)">
+                <Textarea
+                  name="publicDescription"
+                  rows={2}
+                  maxLength={500}
+                  defaultValue={org?.publicDescription ?? ""}
+                  placeholder="A short line about your club or school, shown on the public page."
+                />
+              </Field>
+              <Button type="submit" size="sm">
+                Save public page
+              </Button>
+            </form>
+          ) : (
+            <p className="text-sm text-slate-400">Only admins can edit the public page.</p>
+          )}
+        </CardBody>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader title="Organization" />
@@ -135,6 +168,12 @@ export default async function SettingsPage({
             <p>
               <span className="font-medium text-slate-700">Members: </span>
               {memberCount}
+              {org?.subscription && ` / ${org.subscription.seats} seats`}
+              {org?.subscription && memberCount >= org.subscription.seats && (
+                <Badge color="red" className="ml-2">
+                  Seat limit reached
+                </Badge>
+              )}
             </p>
             <p>
               <span className="font-medium text-slate-700">Your role: </span>

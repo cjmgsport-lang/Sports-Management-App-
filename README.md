@@ -6,7 +6,7 @@ A subscription sports management platform for schools, clubs, universities, fran
 
 - **Editable calendars** — team schedules for training, matches, meetings and travel.
 - **Training plans, built on tactical periodisation** — a per-team **Game Model** (principles of play under the four moments: offensive organization, defensive organization, attacking transition, defensive transition, plus set pieces) that every drill is tagged against; seasons run macrocycles → mesocycles → weekly **morphocycles** (microcycles built backward from the next match with MD-4…MD-1 match-day codes, a dominant moment and sub-dynamic per day — duration → speed-endurance → speed → activation) → individual sessions.
-- **Chat** — per-team channels.
+- **Chat** — live (polling-based, no refresh needed) team channels, 1:1 direct messages between any two members, coach-curated small "unit" group chats from a team's roster, and an admin-to-parents broadcast channel (org-wide, read-only for parents).
 - **Noticeboard** — pinned announcements targeted by audience (coaches / parents / athletes / staff).
 - **Fixtures, tournaments & results** — fixture templates, tournaments, fixtures and result capture.
 - **GPS / video / session animation / PDF uploads** — files linked to training sessions or fixtures, served through an access-controlled route.
@@ -17,7 +17,8 @@ A subscription sports management platform for schools, clubs, universities, fran
 - **Weekly feedback** — coach feedback plus athlete reflection.
 - **Trials & selection** — trial events and per-athlete selection decisions.
 - **Resource sharing** — booking for fields, balls, cones, poles, mannequins, GPS units and video equipment.
-- **Organization settings** — org details, white-label branding (logo + brand color, applied app-wide), and real subscription billing via Paystack (Growth/Pro checkout, cancellation, webhook-driven renewals).
+- **Organization settings** — org details, white-label branding (logo + brand color, applied app-wide and on a public page — see below), and real subscription billing via Paystack (Growth/Pro checkout, cancellation, webhook-driven renewals, enforced seat limits per plan).
+- **Public org page** (`/o/[slug]`, no login required) — a shareable page for each client's own community, using their logo and brand color automatically; the description is editable from Settings.
 
 ## Tech stack
 

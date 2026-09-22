@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { isAdmin } from "@/lib/roles";
 import { disableSubscription } from "@/lib/paystack";
+import { PLAN_SEAT_LIMITS } from "@/lib/plan-limits";
 
 /** Downgrades to the free Starter plan — cancels any live Paystack subscription first. */
 export async function switchToFreeAction(orgId: string) {
@@ -22,7 +23,13 @@ export async function switchToFreeAction(orgId: string) {
 
   await db.subscription.update({
     where: { organizationId: orgId },
-    data: { plan: "STARTER", status: "ACTIVE", paystackSubscriptionCode: null, paystackEmailToken: null },
+    data: {
+      plan: "STARTER",
+      status: "ACTIVE",
+      seats: PLAN_SEAT_LIMITS.STARTER,
+      paystackSubscriptionCode: null,
+      paystackEmailToken: null,
+    },
   });
   revalidatePath(`/org/${orgId}/settings`);
 }

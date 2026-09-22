@@ -9,9 +9,11 @@ async function main() {
   const org = await db.organization.create({
     data: {
       name: "Freedom High School Sports",
+      slug: "freedom-high-school-sports",
       type: "SCHOOL",
       city: "Cape Town",
       province: "Western Cape",
+      publicDescription: "Home of hockey, netball and athletics at Freedom High School — go get 'em!",
       subscription: {
         create: { plan: "GROWTH", status: "ACTIVE", seats: 250, renewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
       },
@@ -289,13 +291,54 @@ async function main() {
   });
   await db.sessionDrill.create({ data: { sessionId: sessionActivation.id, drillId: drill4.id, orderIndex: 0, durationMin: 15 } });
 
-  // Chat
-  const channel = await db.chatChannel.create({ data: { teamId: team.id, name: "general", isGeneral: true } });
+  // Chat: team channel, a coach<->athlete DM, a coach-curated "unit", and
+  // an admin-to-parents broadcast.
+  const channel = await db.chatChannel.create({
+    data: { organizationId: org.id, teamId: team.id, name: "general", isGeneral: true, kind: "TEAM", createdById: coach.id },
+  });
   await db.chatMessage.createMany({
     data: [
       { channelId: channel.id, authorId: coach.id, body: "Welcome to the 2026 season! Training starts Tuesday." },
       { channelId: channel.id, authorId: athlete1.id, body: "Looking forward to it, coach!" },
     ],
+  });
+
+  const dmChannel = await db.chatChannel.create({
+    data: {
+      organizationId: org.id,
+      kind: "DIRECT",
+      name: "Direct message",
+      createdById: coach.id,
+      participants: { create: [{ userId: coach.id }, { userId: athlete1.id }] },
+    },
+  });
+  await db.chatMessage.create({
+    data: { channelId: dmChannel.id, authorId: coach.id, body: "Kabelo, well done on the fitness testing today." },
+  });
+
+  const unitChannel = await db.chatChannel.create({
+    data: {
+      organizationId: org.id,
+      teamId: team.id,
+      kind: "GROUP",
+      name: "Midfield unit",
+      createdById: coach.id,
+      participants: { create: [{ userId: coach.id }, { userId: athlete1.id }] },
+    },
+  });
+  await db.chatMessage.create({
+    data: { channelId: unitChannel.id, authorId: coach.id, body: "Midfield: focus on the pressing triggers we drilled this week." },
+  });
+
+  const parentBroadcastChannel = await db.chatChannel.create({
+    data: { organizationId: org.id, kind: "PARENT_BROADCAST", name: "Parent Notices", createdById: owner.id },
+  });
+  await db.chatMessage.create({
+    data: {
+      channelId: parentBroadcastChannel.id,
+      authorId: owner.id,
+      body: "Welcome to the 2026 season! We'll use this channel for important announcements throughout the year.",
+    },
   });
 
   // Noticeboard

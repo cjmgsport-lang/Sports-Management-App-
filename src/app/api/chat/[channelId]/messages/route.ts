@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { assertChannelAccess } from "@/lib/chat-access";
 
 // Polled by the chat UI every couple of seconds to pick up messages sent by
 // other people since the client's last-seen timestamp — a simple,
@@ -16,13 +17,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ chan
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const channel = await db.chatChannel.findUnique({ where: { id: channelId }, include: { team: true } });
+  const channel = await db.chatChannel.findUnique({ where: { id: channelId } });
   if (!channel) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const membership = await db.membership.findUnique({
-    where: { userId_organizationId: { userId: session.user.id, organizationId: channel.team.organizationId } },
+    where: { userId_organizationId: { userId: session.user.id, organizationId: channel.organizationId } },
   });
   if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  try {
+    await assertChannelAccess(channel.organizationId, channelId, session.user.id, membership.role, "read");
+  } catch {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const messages = await db.chatMessage.findMany({
     where: {

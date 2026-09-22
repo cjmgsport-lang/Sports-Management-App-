@@ -27,15 +27,20 @@ datasource db {
 // ---------- Core tenancy ----------
 
 model Organization {
-  id           String   @id @default(cuid())
-  name         String
-  type         String
-  province     String?
-  city         String?
-  logoPath     String?
-  logoMimeType String?
-  brandColor   String?
-  createdAt    DateTime @default(now())
+  id                String   @id @default(cuid())
+  name              String
+  type              String
+  province          String?
+  city              String?
+  logoPath          String?
+  logoMimeType      String?
+  brandColor        String?
+  // Public page (/o/[slug]) — no login required. slug is set once at
+  // signup; publicDescription is editable from Settings alongside the
+  // logo/brand color, which the public page also uses.
+  slug              String   @unique
+  publicDescription String?
+  createdAt         DateTime @default(now())
 
   subscription Subscription?
   memberships  Membership[]
@@ -56,6 +61,7 @@ model Organization {
   seasonBudgets SeasonBudget[]
   idps         IndividualDevelopmentPlan[]
   seasons      Season[]
+  chatChannels ChatChannel[]
 }
 
 model Subscription {
@@ -104,6 +110,8 @@ model User {
   feedbackGiven    WeeklyFeedback[] @relation("CoachFeedback")
 
   chatMessages    ChatMessage[]
+  chatChannelsCreated ChatChannel[]
+  chatParticipations  ChatParticipant[]
   notices         Notice[]
   uploads         UploadAsset[]
   clothingOrders  ClothingOrder[]
@@ -322,16 +330,46 @@ model SessionDrill {
 }
 
 // ---------- Chat ----------
+// Four kinds of channel, distinguished by `kind`:
+//   TEAM             — open to the whole org today (unchanged from before
+//                       this model grew participants); teamId set.
+//   DIRECT           — exactly 2 participants (a 1:1 DM); teamId null.
+//   GROUP            — a coach-curated subset of a team's roster (a
+//                       "unit" — e.g. a position group); participants
+//                       listed explicitly; teamId set for context.
+//   PARENT_BROADCAST — org-wide; postable only by admins, readable by
+//                       anyone with the PARENT role (checked in code by
+//                       role, not by a participants row, since the parent
+//                       roster changes and there's no parent<->child link
+//                       to scope it to one team). teamId null.
 
 model ChatChannel {
+  id             String   @id @default(cuid())
+  organizationId String
+  teamId         String?
+  kind           String   @default("TEAM")
+  name           String
+  isGeneral      Boolean  @default(false)
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdBy    User              @relation(fields: [createdById], references: [id])
+  messages     ChatMessage[]
+  participants ChatParticipant[]
+}
+
+model ChatParticipant {
   id        String   @id @default(cuid())
-  teamId    String
-  name      String
-  isGeneral Boolean  @default(false)
+  channelId String
+  userId    String
   createdAt DateTime @default(now())
 
-  team     Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  messages ChatMessage[]
+  channel ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
 }
 
 model ChatMessage {
