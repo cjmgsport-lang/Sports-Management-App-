@@ -20,8 +20,12 @@ export type MembershipRole =
   | "STAFF";
 
 // Roles that can manage org-level settings, membership, and configuration.
-// HOD (Head of Department) has the same full permissions as Admin.
-export const ADMIN_ROLES: string[] = ["OWNER", "ADMIN", "HOD"];
+// HOD (Head of Department) has the same full permissions as Admin. Coach and
+// Manager also carry full permissions permanently — in a small club/school
+// setup the coach or manager typically *is* the person running the org day
+// to day, so they shouldn't need a separate "Owner" identity just to get
+// admin rights.
+export const ADMIN_ROLES: string[] = ["OWNER", "ADMIN", "HOD", "COACH", "MANAGER"];
 
 // Roles that can create/edit coaching content (plans, calendar, selection, feedback).
 export const COACHING_ROLES: string[] = ["OWNER", "ADMIN", "HOD", "COACH", "ASSISTANT_COACH", "MANAGER"];
