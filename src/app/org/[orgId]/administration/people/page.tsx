@@ -3,6 +3,7 @@ import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select } from "@/components/ui";
 import { addStaffMemberAction } from "@/lib/actions/staff";
 import { isAdmin, ROLE_LABELS, STAFF_DIRECTORY_ROLES } from "@/lib/roles";
+import { generateSuggestedPassword } from "@/lib/password";
 
 export default async function AdministrationPeoplePage({ params }: { params: Promise<{ orgId: string }> }) {
   const { orgId } = await params;
@@ -88,6 +89,13 @@ export default async function AdministrationPeoplePage({ params }: { params: Pro
                 <Field label="Phone (optional)">
                   <Input name="phone" placeholder="+27 82 000 0000" />
                 </Field>
+                <Field label="Temporary password">
+                  <Input name="tempPassword" defaultValue={generateSuggestedPassword()} required minLength={8} />
+                </Field>
+                <p className="text-xs text-slate-400">
+                  Only used if this email isn't already a member. Share it with them directly (WhatsApp, in person) — they can change it
+                  from My Account after logging in.
+                </p>
                 <Button type="submit" className="w-full">
                   Add to directory
                 </Button>

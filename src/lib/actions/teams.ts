@@ -2,7 +2,6 @@
 
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import crypto from "crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
@@ -47,11 +46,17 @@ const addMemberSchema = z.object({
     "MEDICAL",
     "MANAGER",
     "ANALYST",
+    "ADMIN_ASSISTANT",
+    "LOGISTICS_MANAGER",
+    "PERFORMANCE_PSYCH",
+    "PHYSIO",
+    "STRENGTH_CONDITIONING",
     "ATHLETE",
     "PARENT",
     "STAFF",
   ]),
   teamRole: z.enum(["HEAD_COACH", "ASSISTANT_COACH", "HOD", "MANAGER", "ANALYST", "MEDICAL", "ATHLETE"]),
+  tempPassword: z.string().min(8).optional(),
 });
 
 export async function addTeamMemberAction(orgId: string, teamId: string, formData: FormData) {
@@ -65,6 +70,7 @@ export async function addTeamMemberAction(orgId: string, teamId: string, formDat
     email: formData.get("email"),
     orgRole: formData.get("orgRole"),
     teamRole: formData.get("teamRole"),
+    tempPassword: formData.get("tempPassword") || undefined,
   });
   const email = parsed.email.toLowerCase().trim();
 
@@ -85,9 +91,9 @@ export async function addTeamMemberAction(orgId: string, teamId: string, formDat
   }
 
   if (!user) {
-    const tempPassword = crypto.randomBytes(9).toString("base64url");
+    if (!parsed.tempPassword) throw new Error("A temporary password is required for a brand-new member.");
     user = await db.user.create({
-      data: { name: parsed.name, email, passwordHash: await bcrypt.hash(tempPassword, 10) },
+      data: { name: parsed.name, email, passwordHash: await bcrypt.hash(parsed.tempPassword, 10) },
     });
   }
 

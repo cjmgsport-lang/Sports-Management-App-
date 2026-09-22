@@ -4,6 +4,7 @@ import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select } from "@/components/ui";
 import { addTeamMemberAction, removeTeamMemberAction } from "@/lib/actions/teams";
 import { isAdmin, ROLE_LABELS, TEAM_ROLE_LABELS } from "@/lib/roles";
+import { generateSuggestedPassword } from "@/lib/password";
 
 export default async function TeamDetailPage({
   params,
@@ -105,6 +106,13 @@ export default async function TeamDetailPage({
                     ))}
                   </Select>
                 </Field>
+                <Field label="Temporary password">
+                  <Input name="tempPassword" defaultValue={generateSuggestedPassword()} required minLength={8} />
+                </Field>
+                <p className="text-xs text-slate-400">
+                  Only used if this email isn't already a member. Share it with them directly (WhatsApp, in person) — they can change it
+                  from My Account after logging in.
+                </p>
                 <Button type="submit" className="w-full">
                   Add to team
                 </Button>

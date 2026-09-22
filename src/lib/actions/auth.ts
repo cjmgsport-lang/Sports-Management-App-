@@ -4,8 +4,10 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { slugify } from "@/lib/slug";
 import { PLAN_SEAT_LIMITS } from "@/lib/plan-limits";
+import { requireUser } from "@/lib/current-user";
 
 const signupSchema = z.object({
   orgName: z.string().min(2, "Organization name is required"),
@@ -78,4 +80,42 @@ export async function signupAction(formData: FormData): Promise<void> {
   });
 
   redirect(`/login?registered=1&org=${encodeURIComponent(org.name)}`);
+}
+
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password"),
+    newPassword: z.string().min(8, "New password must be at least 8 characters"),
+    confirmPassword: z.string().min(1),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "New password and confirmation don't match",
+    path: ["confirmPassword"],
+  });
+
+/** Lets the signed-in user set their own password — how someone given a temporary password by an admin takes ownership of their account. */
+export async function changePasswordAction(formData: FormData) {
+  const user = await requireUser();
+
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) {
+    redirect(`/account?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Invalid input")}`);
+  }
+
+  const valid = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
+  if (!valid) {
+    redirect(`/account?error=${encodeURIComponent("Current password is incorrect.")}`);
+  }
+
+  await db.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 10) },
+  });
+
+  revalidatePath("/account");
+  redirect("/account?success=1");
 }

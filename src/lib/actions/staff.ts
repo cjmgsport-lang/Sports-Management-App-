@@ -1,7 +1,6 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
@@ -14,6 +13,7 @@ const staffSchema = z.object({
   email: z.string().email(),
   role: z.enum(STAFF_DIRECTORY_ROLES as [MembershipRole, ...MembershipRole[]]),
   phone: z.string().optional(),
+  tempPassword: z.string().min(8).optional(),
 });
 
 /** Adds (or promotes an existing member to) a backroom staff role — Administration > People. Org-wide, not tied to a team roster. */
@@ -26,6 +26,7 @@ export async function addStaffMemberAction(orgId: string, formData: FormData) {
     email: formData.get("email"),
     role: formData.get("role"),
     phone: formData.get("phone") || undefined,
+    tempPassword: formData.get("tempPassword") || undefined,
   });
   const email = parsed.email.toLowerCase().trim();
 
@@ -43,9 +44,9 @@ export async function addStaffMemberAction(orgId: string, formData: FormData) {
   }
 
   if (!user) {
-    const tempPassword = crypto.randomBytes(9).toString("base64url");
+    if (!parsed.tempPassword) throw new Error("A temporary password is required for a brand-new staff member.");
     user = await db.user.create({
-      data: { name: parsed.name, email, phone: parsed.phone, passwordHash: await bcrypt.hash(tempPassword, 10) },
+      data: { name: parsed.name, email, phone: parsed.phone, passwordHash: await bcrypt.hash(parsed.tempPassword, 10) },
     });
   } else if (parsed.phone) {
     await db.user.update({ where: { id: user.id }, data: { phone: parsed.phone } });
