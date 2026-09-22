@@ -3,8 +3,8 @@ import { clsx } from "clsx";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Button, Card, CardBody, EmptyState, Input, PageHeader, Textarea } from "@/components/ui";
+import { ChatMessages } from "@/components/chat-messages";
 import { createChannelAction, sendMessageAction } from "@/lib/actions/chat";
-import { format } from "date-fns";
 
 export default async function ChatPage({
   params,
@@ -15,7 +15,7 @@ export default async function ChatPage({
 }) {
   const { orgId } = await params;
   const { channelId } = await searchParams;
-  await requireOrgMembership(orgId);
+  const { user } = await requireOrgMembership(orgId);
 
   const teams = await db.team.findMany({
     where: { organizationId: orgId },
@@ -35,7 +35,7 @@ export default async function ChatPage({
 
   return (
     <div>
-      <PageHeader title="Chat" subtitle="Team channels for coaches, athletes, parents and staff." />
+      <PageHeader title="Chat" subtitle="Live team channels for coaches, athletes, parents and staff." />
 
       <div className="grid gap-6 lg:grid-cols-4">
         <Card className="lg:col-span-1">
@@ -85,18 +85,17 @@ export default async function ChatPage({
                 <p className="font-semibold text-slate-900">#{activeChannel.name}</p>
                 <p className="text-xs text-slate-400">{activeChannel.team.name}</p>
               </div>
-              <div className="scrollbar-thin max-h-[50vh] flex-1 space-y-3 overflow-y-auto px-5 py-4">
-                {activeChannel.messages.length === 0 && <p className="text-sm text-slate-400">No messages yet. Say hello!</p>}
-                {activeChannel.messages.map((m) => (
-                  <div key={m.id}>
-                    <p className="text-sm">
-                      <span className="font-medium text-slate-800">{m.author.name}</span>{" "}
-                      <span className="text-xs text-slate-400">{format(m.createdAt, "d MMM HH:mm")}</span>
-                    </p>
-                    <p className="text-sm text-slate-600">{m.body}</p>
-                  </div>
-                ))}
-              </div>
+              <ChatMessages
+                key={activeChannel.id}
+                channelId={activeChannel.id}
+                currentUserId={user.id}
+                initialMessages={activeChannel.messages.map((m) => ({
+                  id: m.id,
+                  body: m.body,
+                  createdAt: m.createdAt.toISOString(),
+                  author: { id: m.author.id, name: m.author.name },
+                }))}
+              />
               <form action={sendMessageAction.bind(null, orgId, activeChannel.id)} className="flex gap-2 border-t border-slate-100 px-5 py-3">
                 <Textarea name="body" required rows={1} placeholder="Write a message…" className="flex-1" />
                 <Button type="submit">Send</Button>
