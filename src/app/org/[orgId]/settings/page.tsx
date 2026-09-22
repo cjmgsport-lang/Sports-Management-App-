@@ -5,15 +5,25 @@ import { switchToFreeAction } from "@/lib/actions/settings";
 import { cancelSubscriptionAction, startCheckoutAction } from "@/lib/actions/billing";
 import { resetBrandColorAction, updateBrandingAction, updatePublicPageAction } from "@/lib/actions/branding";
 import { applyChargeSuccess } from "@/lib/billing-events";
-import { verifyTransaction } from "@/lib/paystack";
+import { PLAN_PRICING, verifyTransaction } from "@/lib/paystack";
 import { isAdmin, ORG_TYPE_LABELS, ROLE_LABELS } from "@/lib/roles";
 import { format } from "date-fns";
 
+function formatRand(cents: number): string {
+  return `R${(cents / 100).toLocaleString("en-ZA", { maximumFractionDigits: 0 })}`;
+}
+
+// % saved by paying annually instead of 12x the monthly price, rounded down.
+function annualSavingsPct(plan: "GROWTH" | "PRO"): number {
+  const { MONTHLY, ANNUAL } = PLAN_PRICING[plan];
+  return Math.floor((1 - ANNUAL.amountZarCents / (MONTHLY.amountZarCents * 12)) * 100);
+}
+
 const PLANS = [
-  { id: "STARTER", name: "Starter", seats: "Up to 50 members", price: "R0 (30-day trial)" },
-  { id: "GROWTH", name: "Growth", seats: "Up to 250 members", price: "R2,499 / month" },
-  { id: "PRO", name: "Pro", seats: "Up to 1,000 members", price: "R5,999 / month" },
-  { id: "ENTERPRISE", name: "Enterprise", seats: "Unlimited members, multi-team federations", price: "Custom pricing" },
+  { id: "STARTER" as const, name: "Starter", seats: "Up to 50 members" },
+  { id: "GROWTH" as const, name: "Growth", seats: "Up to 250 members" },
+  { id: "PRO" as const, name: "Pro", seats: "Up to 1,000 members" },
+  { id: "ENTERPRISE" as const, name: "Enterprise", seats: "Unlimited members, multi-team federations" },
 ];
 
 const STATUS_LABELS: Record<string, string> = {
@@ -188,8 +198,10 @@ export default async function SettingsPage({
             subtitle={
               org?.subscription
                 ? `${STATUS_LABELS[org.subscription.status] ?? org.subscription.status}${
-                    org.subscription.trialEndsAt ? ` · trial ends ${format(org.subscription.trialEndsAt, "d MMM yyyy")}` : ""
-                  }${org.subscription.renewsAt ? ` · renews ${format(org.subscription.renewsAt, "d MMM yyyy")}` : ""}`
+                    org.subscription.billingInterval ? ` · billed ${org.subscription.billingInterval === "ANNUAL" ? "annually" : "monthly"}` : ""
+                  }${org.subscription.trialEndsAt ? ` · trial ends ${format(org.subscription.trialEndsAt, "d MMM yyyy")}` : ""}${
+                    org.subscription.renewsAt ? ` · renews ${format(org.subscription.renewsAt, "d MMM yyyy")}` : ""
+                  }`
                 : undefined
             }
           />
@@ -205,7 +217,15 @@ export default async function SettingsPage({
                     {currentPlan === p.id && <Badge color="blue">Current</Badge>}
                   </div>
                   <p className="mt-1 text-sm text-slate-500">{p.seats}</p>
-                  <p className="mt-1 text-sm font-medium text-slate-700">{p.price}</p>
+
+                  {p.id === "STARTER" && <p className="mt-1 text-sm font-medium text-slate-700">R0 (30-day trial)</p>}
+                  {p.id === "ENTERPRISE" && <p className="mt-1 text-sm font-medium text-slate-700">Custom pricing</p>}
+                  {(p.id === "GROWTH" || p.id === "PRO") && (
+                    <p className="mt-1 text-sm font-medium text-slate-700">
+                      {formatRand(PLAN_PRICING[p.id].MONTHLY.amountZarCents)} / month or{" "}
+                      {formatRand(PLAN_PRICING[p.id].ANNUAL.amountZarCents)} / year
+                    </p>
+                  )}
 
                   {canManageBilling && currentPlan !== p.id && (
                     <>
@@ -217,12 +237,27 @@ export default async function SettingsPage({
                         </form>
                       )}
                       {(p.id === "GROWTH" || p.id === "PRO") && (
-                        <form action={startCheckoutAction.bind(null, orgId)} className="mt-2">
-                          <input type="hidden" name="plan" value={p.id} />
-                          <Button type="submit" size="sm" className="w-full">
-                            Upgrade to {p.name}
-                          </Button>
-                        </form>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <form action={startCheckoutAction.bind(null, orgId)}>
+                            <input type="hidden" name="plan" value={p.id} />
+                            <input type="hidden" name="interval" value="MONTHLY" />
+                            <Button type="submit" size="sm" variant="secondary" className="w-full">
+                              Monthly
+                            </Button>
+                          </form>
+                          <form action={startCheckoutAction.bind(null, orgId)}>
+                            <input type="hidden" name="plan" value={p.id} />
+                            <input type="hidden" name="interval" value="ANNUAL" />
+                            <Button type="submit" size="sm" className="w-full">
+                              Annual
+                            </Button>
+                          </form>
+                        </div>
+                      )}
+                      {(p.id === "GROWTH" || p.id === "PRO") && (
+                        <p className="mt-1.5 text-center text-xs font-medium text-emerald-600">
+                          Save {annualSavingsPct(p.id)}% paying annually
+                        </p>
                       )}
                       {p.id === "ENTERPRISE" && (
                         <a

@@ -17,7 +17,7 @@ A subscription sports management platform for schools, clubs, universities, fran
 - **Weekly feedback** — coach feedback plus athlete reflection.
 - **Trials & selection** — trial events and per-athlete selection decisions.
 - **Resource sharing** — booking for fields, balls, cones, poles, mannequins, GPS units and video equipment.
-- **Organization settings** — org details, white-label branding (logo + brand color, applied app-wide and on a public page — see below), and real subscription billing via Paystack (Growth/Pro checkout, cancellation, webhook-driven renewals, enforced seat limits per plan).
+- **Organization settings** — org details, white-label branding (logo + brand color, applied app-wide and on a public page — see below), and real subscription billing via Paystack (Growth/Pro checkout with a monthly or annual price, cancellation, webhook-driven renewals, enforced seat limits per plan).
 - **Public org page** (`/o/[slug]`, no login required) — a shareable page for each client's own community, using their logo and brand color automatically; the description is editable from Settings.
 
 ## Tech stack
@@ -86,12 +86,17 @@ Steps:
 
 ## Billing (Paystack)
 
-Growth and Pro are real, paid subscriptions via [Paystack](https://paystack.com) Standard Checkout + Subscriptions. Starter is free (no checkout) and Enterprise is "contact sales" (no self-serve checkout — it's custom-priced).
+Growth and Pro are real, paid subscriptions via [Paystack](https://paystack.com) Standard Checkout + Subscriptions, each billable monthly or annually. Starter is free (no checkout) and Enterprise is "contact sales" (no self-serve checkout — it's custom-priced).
+
+| Plan | Monthly | Annual |
+| --- | --- | --- |
+| Growth | R899 / month | R8,999 / year |
+| Pro | R1,100 / month | R11,999 / year |
 
 **Setup:**
 
-1. In your Paystack dashboard, go to **Payments → Plans** and create two plans in ZAR: one at R2,499/month (Growth) and one at R5,999/month (Pro) — the amounts must match `PLAN_PRICING` in `src/lib/paystack.ts`, so update one side if you change pricing. Copy each plan's code.
-2. Set env vars: `PAYSTACK_SECRET_KEY` (Settings → API Keys & Webhooks — use the **test** secret key until you're ready to go live), `PAYSTACK_PLAN_CODE_GROWTH`, `PAYSTACK_PLAN_CODE_PRO`.
+1. In your Paystack dashboard, go to **Payments → Plans** and create **four** plans in ZAR — since a Paystack plan is fixed to one billing interval, Growth and Pro each need a monthly plan and an annual plan: Growth Monthly (R899), Growth Annual (R8,999), Pro Monthly (R1,100), Pro Annual (R11,999). The amounts must match `PLAN_PRICING` in `src/lib/paystack.ts`, so update one side if you change pricing. Copy each plan's code.
+2. Set env vars: `PAYSTACK_SECRET_KEY` (Settings → API Keys & Webhooks — use the **test** secret key until you're ready to go live), `PAYSTACK_PLAN_CODE_GROWTH_MONTHLY`, `PAYSTACK_PLAN_CODE_GROWTH_ANNUAL`, `PAYSTACK_PLAN_CODE_PRO_MONTHLY`, `PAYSTACK_PLAN_CODE_PRO_ANNUAL`.
 3. In the same dashboard page, set the **Webhook URL** to `https://<your-domain>/api/webhooks/paystack`. This is the durable, authoritative path that keeps subscriptions in sync (renewals, failed payments, cancellations) — the settings page also verifies-and-applies immediately when Paystack redirects a customer back after checkout, purely for instant UI feedback, but the webhook is what you can rely on if a customer closes their browser mid-payment.
 4. Test with a [Paystack test card](https://paystack.com/docs/payments/test-payments/) before switching to live keys.
 

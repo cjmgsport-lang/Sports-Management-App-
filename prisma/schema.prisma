@@ -69,6 +69,8 @@ model Subscription {
   organizationId String             @unique
   organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   plan           String             @default("STARTER")
+  // MONTHLY or ANNUAL — only meaningful once plan is GROWTH/PRO.
+  billingInterval String?
   status         String             @default("TRIALING")
   seats          Int                @default(25)
   trialEndsAt    DateTime?

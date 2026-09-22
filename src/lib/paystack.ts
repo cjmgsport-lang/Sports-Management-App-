@@ -3,21 +3,32 @@ import crypto from "crypto";
 // --- Plan pricing / Paystack plan codes -------------------------------
 // STARTER has no Paystack plan (it's free). ENTERPRISE is "contact us"
 // (custom pricing, no self-serve checkout). Only GROWTH and PRO go
-// through Paystack Standard Checkout + Subscriptions.
+// through Paystack Standard Checkout + Subscriptions, each with a choice
+// of monthly or annual billing.
 //
 // Plan codes come from your Paystack dashboard (Payments -> Plans -> add
-// a plan priced in ZAR, matching the amounts below) — set them as
-// PAYSTACK_PLAN_CODE_GROWTH / PAYSTACK_PLAN_CODE_PRO. See README.
+// a plan priced in ZAR, matching the amounts below, one per interval) —
+// set them as PAYSTACK_PLAN_CODE_GROWTH_MONTHLY / _ANNUAL and
+// PAYSTACK_PLAN_CODE_PRO_MONTHLY / _ANNUAL. See README.
 
 export type BillablePlan = "GROWTH" | "PRO";
+export type BillingInterval = "MONTHLY" | "ANNUAL";
 
-export const PLAN_PRICING: Record<BillablePlan, { name: string; amountZarCents: number; planCodeEnvVar: string }> = {
-  GROWTH: { name: "Growth", amountZarCents: 249900, planCodeEnvVar: "PAYSTACK_PLAN_CODE_GROWTH" },
-  PRO: { name: "Pro", amountZarCents: 599900, planCodeEnvVar: "PAYSTACK_PLAN_CODE_PRO" },
+type PlanPricing = { name: string; amountZarCents: number; planCodeEnvVar: string };
+
+export const PLAN_PRICING: Record<BillablePlan, Record<BillingInterval, PlanPricing>> = {
+  GROWTH: {
+    MONTHLY: { name: "Growth", amountZarCents: 89900, planCodeEnvVar: "PAYSTACK_PLAN_CODE_GROWTH_MONTHLY" },
+    ANNUAL: { name: "Growth", amountZarCents: 899900, planCodeEnvVar: "PAYSTACK_PLAN_CODE_GROWTH_ANNUAL" },
+  },
+  PRO: {
+    MONTHLY: { name: "Pro", amountZarCents: 110000, planCodeEnvVar: "PAYSTACK_PLAN_CODE_PRO_MONTHLY" },
+    ANNUAL: { name: "Pro", amountZarCents: 1199900, planCodeEnvVar: "PAYSTACK_PLAN_CODE_PRO_ANNUAL" },
+  },
 };
 
-export function getPaystackPlanCode(plan: BillablePlan): string | null {
-  return process.env[PLAN_PRICING[plan].planCodeEnvVar] || null;
+export function getPaystackPlanCode(plan: BillablePlan, interval: BillingInterval): string | null {
+  return process.env[PLAN_PRICING[plan][interval].planCodeEnvVar] || null;
 }
 
 function getSecretKey(): string {
@@ -76,7 +87,7 @@ export type VerifyTransactionResult = {
   reference: string;
   customer?: { customer_code?: string; email?: string } | null;
   plan?: string | { plan_code?: string } | null;
-  metadata?: { organizationId?: string; plan?: string } | null;
+  metadata?: { organizationId?: string; plan?: string; interval?: string } | null;
   authorization?: { authorization_code?: string };
 };
 

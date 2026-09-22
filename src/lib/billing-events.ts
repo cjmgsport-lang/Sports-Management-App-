@@ -25,7 +25,7 @@ import { seatLimitForPlan } from "@/lib/plan-limits";
 type PaystackEventData = {
   status?: string;
   reference?: string;
-  metadata?: { organizationId?: string; plan?: string } | null;
+  metadata?: { organizationId?: string; plan?: string; interval?: string } | null;
   customer?: { customer_code?: string; email?: string } | null;
   plan?: string | { plan_code?: string } | null;
   subscription_code?: string;
@@ -68,6 +68,7 @@ export async function applyChargeSuccess(data: PaystackEventData) {
   const orgId = data.metadata?.organizationId;
   const plan = data.metadata?.plan;
   if (!orgId || !plan) return; // not one of our checkout transactions
+  const interval = data.metadata?.interval;
 
   const subscription = await db.subscription.findUnique({ where: { organizationId: orgId } });
   if (!subscription) return;
@@ -76,6 +77,7 @@ export async function applyChargeSuccess(data: PaystackEventData) {
     where: { organizationId: orgId },
     data: {
       plan,
+      billingInterval: interval ?? subscription.billingInterval,
       status: "ACTIVE",
       seats: seatLimitForPlan(plan),
       paystackCustomerCode: data.customer?.customer_code ?? subscription.paystackCustomerCode,

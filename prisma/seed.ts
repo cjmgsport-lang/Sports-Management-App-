@@ -15,7 +15,13 @@ async function main() {
       province: "Western Cape",
       publicDescription: "Home of hockey, netball and athletics at Freedom High School — go get 'em!",
       subscription: {
-        create: { plan: "GROWTH", status: "ACTIVE", seats: 250, renewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+        create: {
+          plan: "GROWTH",
+          billingInterval: "ANNUAL",
+          status: "ACTIVE",
+          seats: 250,
+          renewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        },
       },
     },
   });
