@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
-import { addTrialistAction, createTrialEventAction, decideSelectionAction } from "@/lib/actions/trials";
+import { addTrialistAction, createTrialEventAction, decideSelectionAction, scoreTrialCriteriaAction } from "@/lib/actions/trials";
+import { TRIAL_CRITERIA, TRIAL_CRITERIA_SHORT_LABELS } from "@/lib/trial-criteria";
 import { format } from "date-fns";
 
 const STATUS_COLOR: Record<string, "slate" | "green" | "amber" | "red"> = {
@@ -27,7 +28,15 @@ export default async function TrialsPage({ params }: { params: Promise<{ orgId: 
 
   return (
     <div>
-      <PageHeader title="Trials & Selection" subtitle="Run trials and record selection decisions transparently." />
+      <PageHeader
+        title="Trials & Selection"
+        subtitle="Run trials, score the nine selection domains and record decisions transparently."
+        action={
+          <a href={`/api/export/${orgId}?type=trials`} className="text-sm font-medium text-brand-600 hover:underline">
+            Export CSV →
+          </a>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
@@ -44,29 +53,57 @@ export default async function TrialsPage({ params }: { params: Promise<{ orgId: 
                   {t.selections.length === 0 ? (
                     <p className="mb-3 text-sm text-slate-400">No trialists added yet.</p>
                   ) : (
-                    <ul className="mb-3 divide-y divide-slate-100">
+                    <div className="mb-3 space-y-3">
                       {t.selections.map((s) => (
-                        <li key={s.id} className="flex items-center justify-between gap-3 py-2">
-                          <div>
+                        <div key={s.id} className="rounded-lg border border-slate-100 p-3">
+                          <div className="flex items-center justify-between gap-3">
                             <p className="text-sm font-medium text-slate-800">{s.athlete.name}</p>
-                            {s.notes && <p className="text-xs text-slate-400">{s.notes}</p>}
+                            <Badge color={STATUS_COLOR[s.status]}>{s.status.replace("_", " ")}</Badge>
                           </div>
-                          <form action={decideSelectionAction.bind(null, orgId, s.id)} className="flex items-center gap-2">
+
+                          <form action={decideSelectionAction.bind(null, orgId, s.id)} className="mt-2 flex items-center gap-2">
                             <Select name="status" defaultValue={s.status} className="w-32 text-xs">
                               <option value="PENDING">Pending</option>
                               <option value="SELECTED">Selected</option>
                               <option value="RESERVE">Reserve</option>
                               <option value="NOT_SELECTED">Not selected</option>
                             </Select>
-                            <input name="notes" defaultValue={s.notes ?? ""} placeholder="Notes" className="w-32 rounded-lg border border-slate-300 px-2 py-1 text-xs" />
-                            <Badge color={STATUS_COLOR[s.status]}>{s.status.replace("_", " ")}</Badge>
+                            <input name="notes" defaultValue={s.notes ?? ""} placeholder="Notes" className="flex-1 rounded-lg border border-slate-300 px-2 py-1 text-xs" />
                             <button type="submit" className="text-xs font-medium text-brand-600 hover:underline">
                               Save
                             </button>
                           </form>
-                        </li>
+
+                          <form
+                            action={scoreTrialCriteriaAction.bind(null, orgId, s.id)}
+                            className="mt-2 grid grid-cols-3 gap-1.5 border-t border-slate-100 pt-2 sm:grid-cols-9"
+                          >
+                            {TRIAL_CRITERIA.map((c) => (
+                              <label key={c} className="text-center">
+                                <span className="block text-[10px] leading-tight text-slate-400">{TRIAL_CRITERIA_SHORT_LABELS[c]}</span>
+                                <select
+                                  name={c}
+                                  defaultValue={s[c] ?? ""}
+                                  className="mt-0.5 w-full rounded border border-slate-200 px-1 py-0.5 text-xs"
+                                >
+                                  <option value="">—</option>
+                                  {[1, 2, 3, 4, 5].map((n) => (
+                                    <option key={n} value={n}>
+                                      {n}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            ))}
+                            <div className="col-span-3 sm:col-span-9">
+                              <button type="submit" className="mt-1 text-xs font-medium text-brand-600 hover:underline">
+                                Save scores
+                              </button>
+                            </div>
+                          </form>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   )}
                   <form action={addTrialistAction.bind(null, orgId, t.id)} className="flex gap-2 border-t border-slate-100 pt-3">
                     <select name="athleteId" required className="flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm">

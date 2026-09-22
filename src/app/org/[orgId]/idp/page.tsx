@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
-import { Card, CardBody, CardHeader, EmptyState, Field, Button, Input, PageHeader, Select, Textarea } from "@/components/ui";
+import { Badge, Card, CardBody, CardHeader, EmptyState, Field, Button, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { createIdpAction } from "@/lib/actions/idp";
+import { TRIAL_CRITERIA, TRIAL_CRITERIA_SHORT_LABELS } from "@/lib/trial-criteria";
 import { format } from "date-fns";
 
 export default async function IdpPage({ params }: { params: Promise<{ orgId: string }> }) {
@@ -21,6 +22,18 @@ export default async function IdpPage({ params }: { params: Promise<{ orgId: str
       orderBy: { createdAt: "desc" },
     }),
   ]);
+
+  // Pull through each athlete's most recent trial-selection criteria scores
+  // from Administration > Trials & Selection, for reference alongside the plan.
+  const scoredTrials = await db.trialSelectionDocument.findMany({
+    where: { trialEvent: { organizationId: orgId }, athleteId: { in: plans.map((p) => p.athleteId) } },
+    include: { trialEvent: true },
+    orderBy: { trialEvent: { date: "desc" } },
+  });
+  const latestScoresByAthlete = new Map<string, (typeof scoredTrials)[number]>();
+  for (const s of scoredTrials) {
+    if (!latestScoresByAthlete.has(s.athleteId)) latestScoresByAthlete.set(s.athleteId, s);
+  }
 
   return (
     <div>
@@ -61,6 +74,24 @@ export default async function IdpPage({ params }: { params: Promise<{ orgId: str
                     </p>
                   )}
                   {p.reviewDate && <p className="text-xs text-slate-400">Next review: {format(p.reviewDate, "d MMM yyyy")}</p>}
+
+                  {latestScoresByAthlete.has(p.athleteId) && (
+                    <div className="border-t border-slate-100 pt-2">
+                      <p className="mb-1 text-xs font-semibold uppercase text-slate-400">
+                        Selection criteria (from {latestScoresByAthlete.get(p.athleteId)!.trialEvent.name})
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {TRIAL_CRITERIA.map((c) => {
+                          const score = latestScoresByAthlete.get(p.athleteId)![c];
+                          return score ? (
+                            <Badge key={c} color="slate">
+                              {TRIAL_CRITERIA_SHORT_LABELS[c]}: {score}/5
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </CardBody>
               </Card>
             ))

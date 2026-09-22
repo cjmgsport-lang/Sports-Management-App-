@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
@@ -12,6 +13,9 @@ const TYPE_COLORS: Record<string, "blue" | "green" | "amber" | "purple" | "slate
   TRAVEL: "purple",
   TOURNAMENT: "red",
   OTHER: "slate",
+  PUBLIC_HOLIDAY: "red",
+  SCHOOL_TERM: "blue",
+  UNIVERSITY_TERM: "purple",
 };
 
 export default async function CalendarPage({
@@ -26,15 +30,40 @@ export default async function CalendarPage({
   await requireOrgMembership(orgId);
 
   const teams = await db.team.findMany({ where: { organizationId: orgId }, orderBy: { name: "asc" } });
-  const events = await db.calendarEvent.findMany({
+  const teamEvents = await db.calendarEvent.findMany({
     where: { team: { organizationId: orgId }, ...(teamId ? { teamId } : {}) },
     include: { team: true },
     orderBy: { startsAt: "asc" },
   });
+  // Org-wide events (public holidays, school/university terms — seeded
+  // under Administration > Planning) aren't team-scoped, so they're only
+  // mixed in here when no team filter is active, and capped to the next
+  // 90 days so five years of seeded rows don't swamp the day-to-day view —
+  // the full 5-year run lives on the Planning page.
+  const orgWideEvents = teamId
+    ? []
+    : await db.calendarEvent.findMany({
+        where: {
+          organizationId: orgId,
+          startsAt: { gte: new Date(), lte: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) },
+        },
+        include: { team: true },
+        orderBy: { startsAt: "asc" },
+        take: 30,
+      });
+  const events = [...teamEvents, ...orgWideEvents].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 
   return (
     <div>
-      <PageHeader title="Calendar" subtitle="Editable schedule of training, matches, meetings and travel." />
+      <PageHeader
+        title="Calendar"
+        subtitle="Editable schedule of training, matches, meetings and travel."
+        action={
+          <Link href={`/org/${orgId}/administration/planning`} className="text-sm font-medium text-brand-600 hover:underline">
+            5-year planning calendar →
+          </Link>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -52,10 +81,10 @@ export default async function CalendarPage({
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-slate-900">{e.title}</p>
-                          <Badge color={TYPE_COLORS[e.type]}>{e.type}</Badge>
+                          <Badge color={TYPE_COLORS[e.type]}>{e.type.replace(/_/g, " ")}</Badge>
                         </div>
                         <p className="text-sm text-slate-500">
-                          {e.team.name} · {format(e.startsAt, "EEE d MMM yyyy, HH:mm")}–{format(e.endsAt, "HH:mm")}
+                          {e.team ? e.team.name : "Org-wide"} · {format(e.startsAt, "EEE d MMM yyyy, HH:mm")}–{format(e.endsAt, "HH:mm")}
                           {e.location ? ` · ${e.location}` : ""}
                         </p>
                         {e.description && <p className="mt-1 text-sm text-slate-400">{e.description}</p>}

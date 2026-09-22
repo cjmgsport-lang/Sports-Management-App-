@@ -1,7 +1,21 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 
 const db = new PrismaClient();
+
+// A minimal, genuinely-valid one-page PDF — so the seeded training-folder
+// download link actually opens something instead of a placeholder path
+// that was never written to disk.
+const MINIMAL_PDF = Buffer.from(
+  "%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n" +
+    "3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 100]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n" +
+    "4 0 obj<</Length 74>>stream\nBT /F1 12 Tf 10 50 Td (Pre-season foundations booklet - seed placeholder) Tj ET\nendstream\nendobj\n" +
+    "5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\n" +
+    "trailer<</Root 1 0 R>>",
+  "utf-8"
+);
 
 async function main() {
   const passwordHash = await bcrypt.hash("password123", 10);
@@ -48,6 +62,29 @@ async function main() {
     data: { name: "Johan Botha", email: "parent@freedomsports.co.za", passwordHash },
   });
 
+  // Backroom staff — Administration > People.
+  const manager = await db.user.create({
+    data: { name: "Nomvula Khumalo", email: "manager@freedomsports.co.za", passwordHash, phone: "0831112222" },
+  });
+  const adminAssistant = await db.user.create({
+    data: { name: "Priya Naidoo", email: "admin.assistant@freedomsports.co.za", passwordHash },
+  });
+  const logisticsManager = await db.user.create({
+    data: { name: "Ben Steyn", email: "logistics@freedomsports.co.za", passwordHash },
+  });
+  const performancePsych = await db.user.create({
+    data: { name: "Dr. Anele Sithole", email: "psych@freedomsports.co.za", passwordHash },
+  });
+  const physio = await db.user.create({
+    data: { name: "Marike Joubert", email: "physio@freedomsports.co.za", passwordHash },
+  });
+  const strengthCoach = await db.user.create({
+    data: { name: "Sipho Mahlangu", email: "strength@freedomsports.co.za", passwordHash },
+  });
+  const analyst = await db.user.create({
+    data: { name: "Chloe Adams", email: "analyst@freedomsports.co.za", passwordHash },
+  });
+
   await db.membership.createMany({
     data: [
       { userId: owner.id, organizationId: org.id, role: "OWNER" },
@@ -57,6 +94,13 @@ async function main() {
       { userId: athlete1.id, organizationId: org.id, role: "ATHLETE" },
       { userId: athlete2.id, organizationId: org.id, role: "ATHLETE" },
       { userId: parent.id, organizationId: org.id, role: "PARENT" },
+      { userId: manager.id, organizationId: org.id, role: "MANAGER" },
+      { userId: adminAssistant.id, organizationId: org.id, role: "ADMIN_ASSISTANT" },
+      { userId: logisticsManager.id, organizationId: org.id, role: "LOGISTICS_MANAGER" },
+      { userId: performancePsych.id, organizationId: org.id, role: "PERFORMANCE_PSYCH" },
+      { userId: physio.id, organizationId: org.id, role: "PHYSIO" },
+      { userId: strengthCoach.id, organizationId: org.id, role: "STRENGTH_CONDITIONING" },
+      { userId: analyst.id, organizationId: org.id, role: "ANALYST" },
     ],
   });
 
@@ -120,6 +164,33 @@ async function main() {
       status: "SCHEDULED",
     },
   });
+
+  // A completed past fixture with a full match report — Administration > Data.
+  const pastFixture = await db.fixture.create({
+    data: {
+      organizationId: org.id,
+      teamId: team.id,
+      templateId: template.id,
+      opponent: "Bishops",
+      homeAway: "AWAY",
+      venue: "Bishops",
+      startsAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+      status: "COMPLETED",
+      ourScore: 3,
+      opponentScore: 1,
+    },
+  });
+  await db.matchResult.create({
+    data: { fixtureId: pastFixture.id, summary: "Strong second-half performance after a tight first half.", createdById: coach.id },
+  });
+  await db.matchGoal.createMany({
+    data: [
+      { fixtureId: pastFixture.id, scorerId: athlete2.id, minute: 22 },
+      { fixtureId: pastFixture.id, scorerId: athlete2.id, minute: 51 },
+      { fixtureId: pastFixture.id, scorerId: athlete1.id, minute: 63 },
+    ],
+  });
+  await db.matchCard.create({ data: { fixtureId: pastFixture.id, playerId: athlete1.id, cardType: "YELLOW", minute: 58 } });
 
   // Game model: the principles every drill and session below is designed
   // to serve, organised by the four moments of the game (+ set pieces).
@@ -347,6 +418,19 @@ async function main() {
     },
   });
 
+  const leadershipChannel = await db.chatChannel.create({
+    data: {
+      organizationId: org.id,
+      kind: "LEADERSHIP",
+      name: "Leadership Group",
+      createdById: coach.id,
+      participants: { create: [{ userId: coach.id }, { userId: athlete2.id }] },
+    },
+  });
+  await db.chatMessage.create({
+    data: { channelId: leadershipChannel.id, authorId: coach.id, body: "Emma, can you check in with the U19s about Friday's captain's run?" },
+  });
+
   // Noticeboard
   await db.notice.create({
     data: { organizationId: org.id, teamId: team.id, authorId: coach.id, title: "Kit collection this Friday", body: "Please collect your training kit from the sports office before Friday 3pm.", audience: "ALL", pinned: true },
@@ -413,11 +497,107 @@ async function main() {
     },
   });
 
-  // Trials & selection
+  // Trials & selection, scored across the nine selection domains.
   const trial = await db.trialEvent.create({
     data: { organizationId: org.id, teamId: team.id, name: "2027 U19 Trials", date: new Date("2026-11-05"), venue: "Main field", ageGroup: "U19" },
   });
-  await db.trialSelectionDocument.create({ data: { trialEventId: trial.id, athleteId: athlete2.id, status: "PENDING" } });
+  await db.trialSelectionDocument.create({
+    data: {
+      trialEventId: trial.id,
+      athleteId: athlete2.id,
+      status: "PENDING",
+      biological: 4,
+      conditioning: 4,
+      coordination: 5,
+      cognitive: 4,
+      socioAffective: 3,
+      creative: 4,
+      emotionalSkill: 4,
+      mental: 5,
+      leadershipCharacter: 5,
+    },
+  });
+
+  // Strength & conditioning — Administration > Data.
+  await db.strengthConditioningEntry.create({
+    data: {
+      organizationId: org.id,
+      athleteId: athlete1.id,
+      createdById: strengthCoach.id,
+      date: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
+      benchPressKg: 62.5,
+      squatKg: 95,
+      sprint10mSec: 1.78,
+      sprint40mSec: 5.32,
+      verticalJumpCm: 58,
+    },
+  });
+
+  // Injury process — Administration > Data.
+  await db.injury.create({
+    data: {
+      organizationId: org.id,
+      athleteId: athlete1.id,
+      createdById: physio.id,
+      dateInjured: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000),
+      report: "Grade 1 hamstring strain, right leg, during sprint work.",
+      treatment: "RICE protocol, physio 3x/week.",
+      healing: "Good progress, minimal swelling by day 10.",
+      rehabilitation: "Progressive loading programme, isometric to eccentric.",
+      returnToTrainDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+      status: "RETURNED_TO_TRAIN",
+    },
+  });
+
+  // Recruitment & retention — Sport.
+  await db.recruitmentRecord.create({
+    data: {
+      organizationId: org.id,
+      teamId: team.id,
+      name: "Sipho",
+      surname: "Ndlovu",
+      dateOfBirth: new Date("2010-06-21"),
+      startYear: 2027,
+      endYear: 2030,
+      positionRole: "Defender",
+      bursaryCost: "50% bursary",
+      dualCareer: "Considering BSc Sport Science part-time from 2028",
+      notes: "Standout at the Western Cape U16 trials.",
+    },
+  });
+
+  // Game continuum — Sport (descriptions only; images are uploaded via the UI).
+  await db.gameContinuumMoment.createMany({
+    data: [
+      { teamId: team.id, moment: "POSSESSION", description: "Build patiently through midfield, draw the press, switch to the underloaded side." },
+      { teamId: team.id, moment: "COUNTER_ATTACK", description: "Vertical, direct — first pass forward, exploit space behind a broken press." },
+      { teamId: team.id, moment: "BALL_RECOVERY_COUNTER_DEFENCE", description: "Nearest player delays immediately; second recovers depth to stop the counter." },
+      { teamId: team.id, moment: "SET_PIECE", description: "Short corner variations from the top; rehearsed runs for long corners." },
+      { teamId: team.id, moment: "ATTACKING_SCORING_BEHAVIOUR", description: "Third attacker arrives late into the circle as the ball is played in." },
+      { teamId: team.id, moment: "DEFENSIVE_GOAL_AREA_BEHAVIOUR", description: "Compact block inside the 23, deny central lanes, force the outside channel." },
+    ],
+  });
+
+  // Training folders — Sport. Writes a real (minimal) PDF to the local
+  // uploads dir so the seeded download link actually opens.
+  const uploadsDir = process.env.UPLOADS_DIR ?? "./storage/uploads";
+  const seedUploadDir = path.join(process.cwd(), uploadsDir, org.id);
+  await mkdir(seedUploadDir, { recursive: true });
+  const seedPdfName = "seed-foundations-booklet.pdf";
+  await writeFile(path.join(seedUploadDir, seedPdfName), MINIMAL_PDF);
+  await db.trainingResource.create({
+    data: {
+      organizationId: org.id,
+      teamId: team.id,
+      category: "FOUNDATIONS",
+      kind: "PDF",
+      title: "Pre-season foundations booklet",
+      description: "Movement literacy and ball-mastery progressions for week 1.",
+      storedPath: path.join(org.id, seedPdfName),
+      mimeType: "application/pdf",
+      uploadedById: coach.id,
+    },
+  });
 
   // Resources
   const gpsUnit = await db.resource.create({
@@ -445,6 +625,13 @@ async function main() {
   console.log("  kabelo@freedomsports.co.za (Athlete)");
   console.log("  emma@freedomsports.co.za (Athlete)");
   console.log("  parent@freedomsports.co.za (Parent)");
+  console.log("  manager@freedomsports.co.za (Manager)");
+  console.log("  admin.assistant@freedomsports.co.za (Administrative Assistant)");
+  console.log("  logistics@freedomsports.co.za (Logistics Manager)");
+  console.log("  psych@freedomsports.co.za (Performance Psychologist)");
+  console.log("  physio@freedomsports.co.za (Physiotherapist)");
+  console.log("  strength@freedomsports.co.za (Strength & Conditioning Coach)");
+  console.log("  analyst@freedomsports.co.za (Performance Analyst)");
 }
 
 main()

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOrgMembership } from "@/lib/current-user";
-import { buildNav } from "@/lib/nav";
+import { buildAreaNav } from "@/lib/nav";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ORG_TYPE_LABELS, ROLE_LABELS } from "@/lib/roles";
@@ -19,7 +19,7 @@ export default async function OrgLayout({
   const org = membership.organization;
   if (!org) notFound();
 
-  const groups = buildNav(orgId);
+  const areas = buildAreaNav(orgId);
   const brandOverride = org.brandColor && HEX_COLOR_PATTERN.test(org.brandColor) ? generateBrandShades(org.brandColor) : null;
   const logoSrc = org.logoPath ? `/api/org-logo/${orgId}?v=${encodeURIComponent(org.logoPath)}` : null;
 
@@ -48,7 +48,7 @@ export default async function OrgLayout({
             </div>
           </div>
         </div>
-        <SidebarNav groups={groups} />
+        <SidebarNav areas={areas} />
         <div className="border-t border-slate-100 px-4 py-3">
           <Link href="/select-organization" className="text-xs font-medium text-brand-600 hover:underline">
             Switch organization

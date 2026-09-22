@@ -93,6 +93,29 @@ export async function createGroupChatAction(orgId: string, teamId: string, formD
   revalidatePath(`/org/${orgId}/chat`);
 }
 
+/** Coach-curated leadership group (captains, vice-captains, senior players) — org-wide, one team's coach can still scope it via teamId. */
+export async function createLeadershipChatAction(orgId: string, formData: FormData) {
+  const { user, membership } = await requireOrgMembership(orgId);
+  if (!canCoach(membership.role)) throw new Error("You don't have permission to create the leadership chat.");
+
+  const name = z.string().min(2).parse(formData.get("name"));
+  const memberIds = formData.getAll("memberIds").map((v) => String(v));
+  if (memberIds.length === 0) throw new Error("Pick at least one leadership member.");
+
+  const participantIds = Array.from(new Set([user.id, ...memberIds]));
+
+  await db.chatChannel.create({
+    data: {
+      organizationId: orgId,
+      kind: "LEADERSHIP",
+      name,
+      createdById: user.id,
+      participants: { create: participantIds.map((userId) => ({ userId })) },
+    },
+  });
+  revalidatePath(`/org/${orgId}/sport/leadership-chat`);
+}
+
 /** Org-wide admin -> parents broadcast channel. At most one per org. */
 export async function createParentBroadcastAction(orgId: string) {
   const { user, membership } = await requireOrgMembership(orgId);

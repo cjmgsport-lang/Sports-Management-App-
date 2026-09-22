@@ -4,7 +4,26 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
-import { canSeeMedical, isAdmin } from "@/lib/roles";
+import { canSeeMedical, isAdmin, type MembershipRole } from "@/lib/roles";
+
+const ALL_ROLES: MembershipRole[] = [
+  "OWNER",
+  "ADMIN",
+  "HOD",
+  "COACH",
+  "ASSISTANT_COACH",
+  "MEDICAL",
+  "MANAGER",
+  "ANALYST",
+  "ADMIN_ASSISTANT",
+  "LOGISTICS_MANAGER",
+  "PERFORMANCE_PSYCH",
+  "PHYSIO",
+  "STRENGTH_CONDITIONING",
+  "ATHLETE",
+  "PARENT",
+  "STAFF",
+];
 
 export async function upsertMemberProfileAction(orgId: string, userId: string, formData: FormData) {
   await requireOrgMembership(orgId);
@@ -97,9 +116,7 @@ export async function upsertTransportNeedAction(orgId: string, userId: string, f
 export async function updateMembershipRoleAction(orgId: string, userId: string, formData: FormData) {
   const { membership } = await requireOrgMembership(orgId);
   if (!isAdmin(membership.role)) throw new Error("Only admins can change roles.");
-  const role = z
-    .enum(["OWNER", "ADMIN", "HOD", "COACH", "ASSISTANT_COACH", "MEDICAL", "MANAGER", "ANALYST", "ATHLETE", "PARENT", "STAFF"])
-    .parse(formData.get("role"));
+  const role = z.enum(ALL_ROLES as [MembershipRole, ...MembershipRole[]]).parse(formData.get("role"));
   await db.membership.update({
     where: { userId_organizationId: { userId, organizationId: orgId } },
     data: { role },

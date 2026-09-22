@@ -7,7 +7,18 @@ import {
   type MatchDayCode,
 } from "@/lib/tactical-periodization";
 
-const STRIP_ORDER: MatchDayCode[] = ["MD_MINUS_5", "MD_MINUS_4", "MD_MINUS_3", "MD_MINUS_2", "MD_MINUS_1", "MD", "MD_PLUS_1"];
+const STRIP_ORDER: MatchDayCode[] = [
+  "MD_MINUS_5",
+  "MD_MINUS_4",
+  "MD_MINUS_3",
+  "MD_MINUS_2",
+  "MD_MINUS_1",
+  "MD",
+  "MD_SECOND_MINUS_2",
+  "MD_SECOND_MINUS_1",
+  "MD_SECOND",
+  "MD_PLUS_1",
+];
 
 const COLOR_CLASSES: Record<string, string> = {
   blue: "bg-blue-100 border-blue-300 text-blue-800",

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { addAthleteCommentAction, createFeedbackAction } from "@/lib/actions/feedback";
+import { uploadAssetAction } from "@/lib/actions/uploads";
 import { format } from "date-fns";
 
 export default async function FeedbackPage({ params }: { params: Promise<{ orgId: string }> }) {
@@ -16,7 +17,7 @@ export default async function FeedbackPage({ params }: { params: Promise<{ orgId
 
   const feedback = await db.weeklyFeedback.findMany({
     where: { team: { organizationId: orgId } },
-    include: { athlete: true, coach: true, team: true },
+    include: { athlete: true, coach: true, team: true, uploads: true },
     orderBy: { weekStarting: "desc" },
   });
 
@@ -64,6 +65,30 @@ export default async function FeedbackPage({ params }: { params: Promise<{ orgId
                       </form>
                     )
                   )}
+
+                  {f.uploads.length > 0 && (
+                    <ul className="space-y-1 border-t border-slate-100 pt-2">
+                      {f.uploads.map((u) => (
+                        <li key={u.id}>
+                          <a href={`/api/files/${u.id}`} target="_blank" className="font-medium text-brand-700 hover:underline">
+                            {u.filename}
+                          </a>{" "}
+                          <Badge color="slate">{u.kind}</Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <form
+                    action={uploadAssetAction.bind(null, orgId)}
+                    className="flex items-center gap-2 border-t border-slate-100 pt-2"
+                  >
+                    <input type="hidden" name="linkedFeedbackId" value={f.id} />
+                    <input type="hidden" name="kind" value="OTHER" />
+                    <input type="file" name="file" required accept="video/*,application/pdf,.ppt,.pptx" className="flex-1 text-xs" />
+                    <Button type="submit" size="sm" variant="secondary">
+                      Attach video/presentation
+                    </Button>
+                  </form>
                 </CardBody>
               </Card>
             ))

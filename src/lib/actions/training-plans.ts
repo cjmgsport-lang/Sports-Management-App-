@@ -5,7 +5,15 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { canCoach } from "@/lib/roles";
-import { COMPLEXITIES, MATCH_DAY_CODES, MOMENTS, SUB_DYNAMICS } from "@/lib/tactical-periodization";
+import {
+  buildMicrocycleSessions,
+  COMPLEXITIES,
+  MATCH_DAY_CODES,
+  MICROCYCLE_TEMPLATES,
+  MOMENTS,
+  SUB_DYNAMICS,
+  type MicrocycleTemplateId,
+} from "@/lib/tactical-periodization";
 
 async function assertCanCoach(orgId: string) {
   const { user, membership } = await requireOrgMembership(orgId);
@@ -213,6 +221,81 @@ export async function createDrillAction(orgId: string, formData: FormData) {
     data: { organizationId: orgId, ...parsed, principleId: parsed.principleId || null },
   });
   revalidatePath(`/org/${orgId}/training-plans`);
+}
+
+const templateSchema = z.object({
+  mesocycleId: z.string().min(1),
+  weekNumber: z.coerce.number().int().min(1),
+  templateId: z.enum(["SINGLE_SATURDAY", "SINGLE_SUNDAY", "DOUBLE_SAT_SUN", "DOUBLE_THU_SUN"]),
+  firstMatchDate: z.string().min(1),
+  theme: z.string().optional(),
+});
+
+/**
+ * Bulk-generates a whole microcycle (Microcycle row + every TrainingSession)
+ * from one of the four named fixture-pattern templates, anchored to the
+ * first match's date — see src/lib/tactical-periodization.ts. Used from
+ * Administration > Planning, where one mesocycle picker covers every
+ * team/season, so mesocycleId/teamId travel via formData rather than bound
+ * route params.
+ */
+export async function generateMicrocycleFromTemplateAction(orgId: string, formData: FormData) {
+  const { user } = await assertCanCoach(orgId);
+  const parsed = templateSchema.parse({
+    mesocycleId: formData.get("mesocycleId"),
+    weekNumber: formData.get("weekNumber"),
+    templateId: formData.get("templateId"),
+    firstMatchDate: formData.get("firstMatchDate"),
+    theme: formData.get("theme") || undefined,
+  });
+  const { mesocycleId } = parsed;
+  const mesocycle = await db.mesocycle.findFirst({
+    where: { id: mesocycleId, macrocycle: { season: { organizationId: orgId } } },
+    include: { macrocycle: { include: { season: true } } },
+  });
+  if (!mesocycle) throw new Error("Mesocycle not found in this organization.");
+
+  const templateId = parsed.templateId as MicrocycleTemplateId;
+  const template = MICROCYCLE_TEMPLATES[templateId];
+  const firstMatchDate = new Date(`${parsed.firstMatchDate}T00:00:00`);
+  if (firstMatchDate.getDay() !== template.matchDayOfWeek) {
+    const expected = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][template.matchDayOfWeek];
+    throw new Error(`"${template.label}" expects the first match date to fall on a ${expected}.`);
+  }
+
+  const rows = buildMicrocycleSessions(templateId, firstMatchDate);
+  const allDates = [...rows.map((r) => r.date), firstMatchDate];
+  if (template.secondMatchDayOfWeek !== null) {
+    // Second match date = first match date + the gap implied by the template (1 day for tight, 3 for gapped).
+    const gap = templateId === "DOUBLE_THU_SUN" ? 3 : 1;
+    const secondMatchDate = new Date(firstMatchDate);
+    secondMatchDate.setDate(secondMatchDate.getDate() + gap);
+    allDates.push(secondMatchDate);
+  }
+  const startDate = new Date(Math.min(...allDates.map((d) => d.getTime())));
+  const endDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
+
+  await db.microcycle.create({
+    data: {
+      mesocycleId,
+      teamId: mesocycle.macrocycle.season.teamId,
+      weekNumber: parsed.weekNumber,
+      startDate,
+      endDate,
+      theme: parsed.theme || template.label,
+      sessions: {
+        create: rows.map((r) => ({
+          date: r.date,
+          focus: r.focus,
+          matchDayCode: r.matchDayCode,
+          subDynamic: r.subDynamic,
+          createdById: user.id,
+        })),
+      },
+    },
+  });
+  revalidatePath(`/org/${orgId}/training-plans/${mesocycle.macrocycle.season.id}`);
+  revalidatePath(`/org/${orgId}/administration/planning`);
 }
 
 export async function addSessionDrillAction(orgId: string, microcycleId: string, sessionId: string, formData: FormData) {

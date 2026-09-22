@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
+import { TRIAL_CRITERIA } from "@/lib/trial-criteria";
 
 export async function createTrialEventAction(orgId: string, formData: FormData) {
   await requireOrgMembership(orgId);
@@ -66,5 +67,22 @@ export async function decideSelectionAction(orgId: string, selectionId: string, 
     where: { id: selectionId },
     data: { status: parsed.status, notes: parsed.notes, decidedById: user.id, decidedAt: new Date() },
   });
+  revalidatePath(`/org/${orgId}/trials`);
+}
+
+const scoreShape = Object.fromEntries(TRIAL_CRITERIA.map((c) => [c, z.coerce.number().int().min(1).max(5).optional()]));
+const scoreSchema = z.object(scoreShape);
+
+/** Scores an athlete's trial across the nine selection domains (1-5 each) — Administration > Trials & Selection. */
+export async function scoreTrialCriteriaAction(orgId: string, selectionId: string, formData: FormData) {
+  await requireOrgMembership(orgId);
+  const data: Record<string, number | undefined> = {};
+  for (const c of TRIAL_CRITERIA) {
+    const raw = formData.get(c);
+    data[c] = raw ? Number(raw) : undefined;
+  }
+  const parsed = scoreSchema.parse(data);
+
+  await db.trialSelectionDocument.update({ where: { id: selectionId }, data: parsed });
   revalidatePath(`/org/${orgId}/trials`);
 }

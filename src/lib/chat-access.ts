@@ -4,10 +4,10 @@ import { isAdmin } from "@/lib/roles";
 /**
  * Shared by the chat server actions and the polling API route
  * (/api/chat/[channelId]/messages) so both enforce identical rules:
- *   TEAM             — open to anyone in the org (unchanged legacy behaviour).
- *   DIRECT / GROUP    — only listed ChatParticipant rows.
- *   PARENT_BROADCAST — anyone with role PARENT (or an admin) can read;
- *                       only admins can post.
+ *   TEAM                      — open to anyone in the org (unchanged legacy behaviour).
+ *   DIRECT / GROUP / LEADERSHIP — only listed ChatParticipant rows.
+ *   PARENT_BROADCAST          — anyone with role PARENT (or an admin) can
+ *                               read; only admins can post.
  */
 export async function assertChannelAccess(
   orgId: string,
@@ -21,7 +21,7 @@ export async function assertChannelAccess(
 
   if (channel.kind === "TEAM") return channel;
 
-  if (channel.kind === "DIRECT" || channel.kind === "GROUP") {
+  if (channel.kind === "DIRECT" || channel.kind === "GROUP" || channel.kind === "LEADERSHIP") {
     const participant = await db.chatParticipant.findUnique({
       where: { channelId_userId: { channelId, userId } },
     });

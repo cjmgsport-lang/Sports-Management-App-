@@ -7,11 +7,15 @@ import { format } from "date-fns";
 const CATEGORY_LABELS: Record<string, string> = {
   FIELD: "Field",
   BALLS: "Balls",
+  BIBS: "Bibs",
   CONES: "Cones",
+  FLAT_MARKERS: "Flat Markers",
   POLES: "Poles",
   MANNEQUINS: "Mannequins",
+  MINI_GOALS: "Mini-Goals",
   GPS_UNIT: "GPS Units",
   VIDEO_EQUIPMENT: "Video Equipment",
+  VIDEO_ANALYSIS: "Video Analysis",
   OTHER: "Other",
 };
 
@@ -37,7 +41,10 @@ export default async function ResourcesPage({ params }: { params: Promise<{ orgI
 
   return (
     <div>
-      <PageHeader title="Resources & Booking" subtitle="Share fields, balls, cones, poles, mannequins, GPS units and video equipment without double-booking." />
+      <PageHeader
+        title="Resources & Booking"
+        subtitle="Share fields, balls, bibs, cones, flat markers, poles, mannequins, mini-goals, GPS units, video equipment and video analysis without double-booking."
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">

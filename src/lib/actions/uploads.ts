@@ -12,6 +12,8 @@ const metaSchema = z.object({
   linkedFixtureId: z.string().optional(),
   linkedSessionId: z.string().optional(),
   linkedAthleteId: z.string().optional(),
+  linkedFeedbackId: z.string().optional(),
+  folder: z.string().optional(),
 });
 
 export async function uploadAssetAction(orgId: string, formData: FormData) {
@@ -28,6 +30,8 @@ export async function uploadAssetAction(orgId: string, formData: FormData) {
     linkedFixtureId: formData.get("linkedFixtureId") || undefined,
     linkedSessionId: formData.get("linkedSessionId") || undefined,
     linkedAthleteId: formData.get("linkedAthleteId") || undefined,
+    linkedFeedbackId: formData.get("linkedFeedbackId") || undefined,
+    folder: formData.get("folder") || undefined,
   });
 
   const { storedPath, sizeBytes } = await saveUploadedFile(orgId, file);
@@ -45,10 +49,14 @@ export async function uploadAssetAction(orgId: string, formData: FormData) {
       linkedFixtureId: parsed.linkedFixtureId || null,
       linkedSessionId: parsed.linkedSessionId || null,
       linkedAthleteId: parsed.linkedAthleteId || null,
+      linkedFeedbackId: parsed.linkedFeedbackId || null,
+      folder: parsed.folder || null,
     },
   });
 
   revalidatePath(`/org/${orgId}/uploads`);
+  revalidatePath(`/org/${orgId}/administration/data/training-folders`);
+  revalidatePath(`/org/${orgId}/feedback`);
 }
 
 export async function deleteUploadAction(orgId: string, uploadId: string) {

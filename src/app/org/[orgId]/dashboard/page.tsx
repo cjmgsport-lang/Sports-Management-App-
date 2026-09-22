@@ -67,7 +67,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ orgI
                 <li key={e.id} className="text-sm">
                   <p className="font-medium text-slate-800">{e.title}</p>
                   <p className="text-slate-400">
-                    {e.team.name} · {format(e.startsAt, "EEE d MMM, HH:mm")}
+                    {e.team?.name} · {format(e.startsAt, "EEE d MMM, HH:mm")}
                   </p>
                 </li>
               ))}

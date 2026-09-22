@@ -62,6 +62,11 @@ model Organization {
   idps         IndividualDevelopmentPlan[]
   seasons      Season[]
   chatChannels ChatChannel[]
+  calendarEvents CalendarEvent[]
+  strengthConditioningEntries StrengthConditioningEntry[]
+  injuries     Injury[]
+  recruitmentRecords RecruitmentRecord[]
+  trainingResources TrainingResource[]
 }
 
 model Subscription {
@@ -122,6 +127,13 @@ model User {
   decidedSelections TrialSelectionDocument[] @relation("DeciderSelection")
   calendarEvents  CalendarEvent[]
   trainingSessions TrainingSession[]
+  matchGoals      MatchGoal[]
+  matchCards      MatchCard[]
+  scEntries         StrengthConditioningEntry[] @relation("SCAthlete")
+  scEntriesRecorded StrengthConditioningEntry[] @relation("SCCreatedBy")
+  injuries          Injury[]                    @relation("InjuredAthlete")
+  injuriesRecorded  Injury[]                    @relation("InjuryCreatedBy")
+  trainingResourcesUploaded TrainingResource[]
 }
 
 model Membership {
@@ -162,6 +174,9 @@ model Team {
   idps           IndividualDevelopmentPlan[]
   weeklyFeedback WeeklyFeedback[]
   gamePrinciples GamePrinciple[]
+  recruitmentRecords RecruitmentRecord[]
+  gameContinuumMoments GameContinuumMoment[]
+  trainingResources TrainingResource[]
 }
 
 model TeamMembership {
@@ -183,7 +198,12 @@ model TeamMembership {
 
 model CalendarEvent {
   id             String    @id @default(cuid())
-  teamId         String
+  // Team-scoped events (training, matches, travel) set teamId. Org-wide
+  // planning events — public holidays, school/university terms, seeded
+  // 2026-2031 under Administration > Planning — set organizationId
+  // instead and leave teamId null.
+  teamId         String?
+  organizationId String?
   title          String
   type           String    @default("TRAINING")
   startsAt       DateTime
@@ -194,8 +214,9 @@ model CalendarEvent {
   createdById    String
   createdAt      DateTime  @default(now())
 
-  team        Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  createdBy   User @relation(fields: [createdById], references: [id])
+  team         Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User          @relation(fields: [createdById], references: [id])
 }
 
 // ---------- Tactical periodisation: game model ----------
@@ -454,6 +475,8 @@ model Fixture {
   result       MatchResult?
   uploads      UploadAsset[]
   microcycles  Microcycle[]
+  goals        MatchGoal[]
+  cards        MatchCard[]
 }
 
 model MatchResult {
@@ -465,6 +488,34 @@ model MatchResult {
   createdAt   DateTime @default(now())
 
   fixture Fixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+}
+
+// Structured match-report detail (Administration > Data): who scored, when,
+// and card discipline — separate from the free-text MatchResult summary.
+model MatchGoal {
+  id        String   @id @default(cuid())
+  fixtureId String
+  scorerId  String
+  minute    Int?
+  ownGoal   Boolean  @default(false)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  fixture Fixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+  scorer  User    @relation(fields: [scorerId], references: [id])
+}
+
+model MatchCard {
+  id        String   @id @default(cuid())
+  fixtureId String
+  playerId  String
+  cardType  String // YELLOW | RED
+  minute    Int?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  fixture Fixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+  player  User    @relation(fields: [playerId], references: [id])
 }
 
 // ---------- Generic uploads (GPS / video / session animation / PDF / image) ----------
@@ -482,12 +533,17 @@ model UploadAsset {
   linkedFixtureId  String?
   linkedSessionId  String?
   linkedAthleteId  String?
+  linkedFeedbackId String?
+  // Free-text folder name for the Administration > Data "Training folders
+  // and uploads" browser — distinct from `kind`, which is the file type.
+  folder           String?
   createdAt        DateTime   @default(now())
 
   organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   uploadedBy   User             @relation(fields: [uploadedById], references: [id])
   fixture      Fixture?         @relation(fields: [linkedFixtureId], references: [id])
   session      TrainingSession? @relation(fields: [linkedSessionId], references: [id])
+  feedback     WeeklyFeedback?  @relation(fields: [linkedFeedbackId], references: [id])
 }
 
 // ---------- Clothing orders ----------
@@ -646,9 +702,10 @@ model WeeklyFeedback {
   athleteComment    String?
   createdAt         DateTime @default(now())
 
-  athlete User @relation("AthleteFeedback", fields: [athleteId], references: [id], onDelete: Cascade)
-  coach   User @relation("CoachFeedback", fields: [coachId], references: [id])
-  team    Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  athlete User          @relation("AthleteFeedback", fields: [athleteId], references: [id], onDelete: Cascade)
+  coach   User          @relation("CoachFeedback", fields: [coachId], references: [id])
+  team    Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  uploads UploadAsset[]
 }
 
 // ---------- Trials & selection ----------
@@ -676,6 +733,18 @@ model TrialSelectionDocument {
   notes        String?
   decidedById  String?
   decidedAt    DateTime?
+
+  // Whole-athlete selection criteria, scored 1-5. See
+  // src/lib/trial-criteria.ts for the fixed set of nine domains.
+  biological         Int?
+  conditioning       Int?
+  coordination       Int?
+  cognitive          Int?
+  socioAffective     Int?
+  creative           Int?
+  emotionalSkill     Int?
+  mental             Int?
+  leadershipCharacter Int?
 
   trialEvent TrialEvent @relation(fields: [trialEventId], references: [id], onDelete: Cascade)
   athlete    User       @relation("AthleteSelection", fields: [athleteId], references: [id], onDelete: Cascade)
@@ -712,4 +781,110 @@ model ResourceBooking {
   resource    Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
   team        Team?    @relation(fields: [teamId], references: [id])
   requestedBy User     @relation(fields: [requestedById], references: [id])
+}
+
+// ---------- Strength & conditioning (Administration > Data) ----------
+
+model StrengthConditioningEntry {
+  id             String   @id @default(cuid())
+  organizationId String
+  athleteId      String
+  date           DateTime
+  benchPressKg   Float?
+  squatKg        Float?
+  sprint10mSec   Float?
+  sprint40mSec   Float?
+  verticalJumpCm Float?
+  notes          String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  athlete      User         @relation("SCAthlete", fields: [athleteId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation("SCCreatedBy", fields: [createdById], references: [id])
+}
+
+// ---------- Injury process (Administration > Data) ----------
+
+model Injury {
+  id                String    @id @default(cuid())
+  organizationId    String
+  athleteId         String
+  dateInjured       DateTime
+  report            String
+  treatment         String?
+  healing           String?
+  rehabilitation    String?
+  returnToTrainDate DateTime?
+  returnToPlayDate  DateTime?
+  status            String    @default("INJURED") // INJURED | REHAB | RETURNED_TO_TRAIN | RETURNED_TO_PLAY
+  createdById       String
+  createdAt         DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  athlete      User         @relation("InjuredAthlete", fields: [athleteId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation("InjuryCreatedBy", fields: [createdById], references: [id])
+}
+
+// ---------- Recruitment & retention (Sport) ----------
+// Prospective and current athletes tracked by name rather than a User
+// record, since recruits often aren't members yet.
+
+model RecruitmentRecord {
+  id             String    @id @default(cuid())
+  organizationId String
+  teamId         String?
+  name           String
+  surname        String
+  dateOfBirth    DateTime?
+  startYear      Int?
+  endYear        Int?
+  positionRole   String?
+  bursaryCost    String?
+  dualCareer     String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?        @relation(fields: [teamId], references: [id])
+}
+
+// ---------- Game continuum (Sport) ----------
+// The six moments of the game continuum, one image + description each,
+// per team.
+
+model GameContinuumMoment {
+  id            String   @id @default(cuid())
+  teamId        String
+  moment        String   // POSSESSION | COUNTER_ATTACK | BALL_RECOVERY_COUNTER_DEFENCE | SET_PIECE | ATTACKING_SCORING_BEHAVIOUR | DEFENSIVE_GOAL_AREA_BEHAVIOUR
+  imagePath     String?
+  imageMimeType String?
+  description   String?
+  updatedAt     DateTime @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, moment])
+}
+
+// ---------- Training resources (Sport) ----------
+// Image / PDF / video / animation uploads organized into the four fixed
+// training folders.
+
+model TrainingResource {
+  id             String   @id @default(cuid())
+  organizationId String
+  teamId         String?
+  category       String // FOUNDATIONS | POSITIONAL_RELATIONAL | SCENARIO_SIMULATION | TACTICAL_GAMES
+  title          String
+  description    String?
+  storedPath     String
+  mimeType       String
+  kind           String // IMAGE | PDF | VIDEO | ANIMATION
+  uploadedById   String
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?        @relation(fields: [teamId], references: [id])
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
 }

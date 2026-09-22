@@ -76,7 +76,20 @@ export const SUB_DYNAMIC_HINTS: Record<SubDynamic, string> = {
   ACTIVATION: "Very light, no residual fatigue — tactical review and set-piece walkthroughs before the match.",
 };
 
-export type MatchDayCode = "MD_MINUS_5" | "MD_MINUS_4" | "MD_MINUS_3" | "MD_MINUS_2" | "MD_MINUS_1" | "MD" | "MD_PLUS_1" | "MD_PLUS_2";
+export type MatchDayCode =
+  | "MD_MINUS_5"
+  | "MD_MINUS_4"
+  | "MD_MINUS_3"
+  | "MD_MINUS_2"
+  | "MD_MINUS_1"
+  | "MD"
+  // Double-header weeks (two matches): the second match's own MD-1/MD-2
+  // relative to itself, and MD itself for the second match day.
+  | "MD_SECOND_MINUS_2"
+  | "MD_SECOND_MINUS_1"
+  | "MD_SECOND"
+  | "MD_PLUS_1"
+  | "MD_PLUS_2";
 
 // Ordered as they fall across a week, MD first for reference.
 export const MATCH_DAY_CODES: MatchDayCode[] = [
@@ -88,6 +101,9 @@ export const MATCH_DAY_CODES: MatchDayCode[] = [
   "MD_MINUS_2",
   "MD_MINUS_1",
   "MD",
+  "MD_SECOND_MINUS_2",
+  "MD_SECOND_MINUS_1",
+  "MD_SECOND",
 ];
 
 // A typical single-match week (Sat match), in calendar order, with the
@@ -110,14 +126,131 @@ export const MATCH_DAY_LABELS: Record<MatchDayCode, string> = {
   MD_MINUS_2: "MD-2",
   MD_MINUS_1: "MD-1",
   MD: "MD",
+  MD_SECOND_MINUS_2: "MD-2 (2nd match)",
+  MD_SECOND_MINUS_1: "MD-1 (2nd match)",
+  MD_SECOND: "MD (2nd match)",
   MD_PLUS_1: "MD+1",
   MD_PLUS_2: "MD+2",
 };
 
+const MATCH_DAY_SORT_ORDER: MatchDayCode[] = [
+  "MD_MINUS_5",
+  "MD_MINUS_4",
+  "MD_MINUS_3",
+  "MD_MINUS_2",
+  "MD_MINUS_1",
+  "MD",
+  "MD_SECOND_MINUS_2",
+  "MD_SECOND_MINUS_1",
+  "MD_SECOND",
+  "MD_PLUS_1",
+  "MD_PLUS_2",
+];
+
 export function matchDaySortIndex(code: string | null | undefined): number {
-  const order: MatchDayCode[] = ["MD_MINUS_5", "MD_MINUS_4", "MD_MINUS_3", "MD_MINUS_2", "MD_MINUS_1", "MD", "MD_PLUS_1", "MD_PLUS_2"];
-  const idx = order.indexOf(code as MatchDayCode);
+  const idx = MATCH_DAY_SORT_ORDER.indexOf(code as MatchDayCode);
   return idx === -1 ? 99 : idx;
+}
+
+// ---------- Microcycle templates ----------
+// Four named shapes for a week, keyed to the fixture pattern the user
+// chooses. A "single match" week is structurally identical whether the
+// match falls on Saturday or Sunday (the codes are all relative to the
+// match date), so SINGLE_SATURDAY and SINGLE_SUNDAY share one recipe —
+// they're kept as separate named options because that's how coaches think
+// about the week, and the UI enforces the expected weekday when picking
+// the anchor date.
+
+export type MicrocycleTemplateId = "SINGLE_SATURDAY" | "SINGLE_SUNDAY" | "DOUBLE_SAT_SUN" | "DOUBLE_THU_SUN";
+
+export const MICROCYCLE_TEMPLATES: Record<
+  MicrocycleTemplateId,
+  { label: string; matchDayOfWeek: number; secondMatchDayOfWeek: number | null; description: string }
+> = {
+  SINGLE_SATURDAY: {
+    label: "Single match — Saturday",
+    matchDayOfWeek: 6,
+    secondMatchDayOfWeek: null,
+    description: "One match, kicking off on Saturday.",
+  },
+  SINGLE_SUNDAY: {
+    label: "Single match — Sunday",
+    matchDayOfWeek: 0,
+    secondMatchDayOfWeek: null,
+    description: "One match, kicking off on Sunday.",
+  },
+  DOUBLE_SAT_SUN: {
+    label: "Double header — Saturday & Sunday",
+    matchDayOfWeek: 6,
+    secondMatchDayOfWeek: 0,
+    description: "Back-to-back matches, Saturday then Sunday.",
+  },
+  DOUBLE_THU_SUN: {
+    label: "Double header — Thursday & Sunday",
+    matchDayOfWeek: 4,
+    secondMatchDayOfWeek: 0,
+    description: "Two matches three days apart, Thursday then Sunday.",
+  },
+};
+
+export type TemplateSessionRecipe = {
+  /** Days offset from the first match date (negative = before, positive = after). */
+  offsetDays: number;
+  matchDayCode: MatchDayCode;
+  subDynamic: SubDynamic;
+  focus: string;
+};
+
+const SINGLE_MATCH_RECIPE: TemplateSessionRecipe[] = [
+  { offsetDays: -4, matchDayCode: "MD_MINUS_4", subDynamic: "DURATION", focus: "Base training — high duration, sub-maximal intensity" },
+  { offsetDays: -3, matchDayCode: "MD_MINUS_3", subDynamic: "SPEED_ENDURANCE", focus: "Speed-endurance work in tactically specific duels" },
+  { offsetDays: -2, matchDayCode: "MD_MINUS_2", subDynamic: "SPEED", focus: "Short, explosive, tactically specific actions" },
+  { offsetDays: -1, matchDayCode: "MD_MINUS_1", subDynamic: "ACTIVATION", focus: "Activation & set-piece walkthrough" },
+  { offsetDays: 1, matchDayCode: "MD_PLUS_1", subDynamic: "RECOVERY", focus: "Recovery — low intensity, low complexity" },
+];
+
+const DOUBLE_HEADER_TIGHT_RECIPE: TemplateSessionRecipe[] = [
+  // Back-to-back (1 day apart): all prep happens before match 1, then
+  // straight into recovery once match 2 is done.
+  { offsetDays: -4, matchDayCode: "MD_MINUS_4", subDynamic: "DURATION", focus: "Base training — high duration, sub-maximal intensity" },
+  { offsetDays: -3, matchDayCode: "MD_MINUS_3", subDynamic: "SPEED_ENDURANCE", focus: "Speed-endurance work in tactically specific duels" },
+  { offsetDays: -2, matchDayCode: "MD_MINUS_2", subDynamic: "SPEED", focus: "Short, explosive, tactically specific actions" },
+  { offsetDays: -1, matchDayCode: "MD_MINUS_1", subDynamic: "ACTIVATION", focus: "Activation & set-piece walkthrough" },
+  { offsetDays: 2, matchDayCode: "MD_PLUS_1", subDynamic: "RECOVERY", focus: "Recovery after both matches — low intensity, low complexity" },
+];
+
+const DOUBLE_HEADER_GAPPED_RECIPE: TemplateSessionRecipe[] = [
+  // Three days apart: full prep before match 1, then a short, minimal-load
+  // bridge before match 2.
+  { offsetDays: -4, matchDayCode: "MD_MINUS_4", subDynamic: "DURATION", focus: "Base training — high duration, sub-maximal intensity" },
+  { offsetDays: -3, matchDayCode: "MD_MINUS_3", subDynamic: "SPEED_ENDURANCE", focus: "Speed-endurance work in tactically specific duels" },
+  { offsetDays: -2, matchDayCode: "MD_MINUS_2", subDynamic: "SPEED", focus: "Short, explosive, tactically specific actions" },
+  { offsetDays: -1, matchDayCode: "MD_MINUS_1", subDynamic: "ACTIVATION", focus: "Activation & set-piece walkthrough" },
+  { offsetDays: 1, matchDayCode: "MD_SECOND_MINUS_2", subDynamic: "SPEED_ENDURANCE", focus: "Between-match touch — minimal fatigue carried into match 2" },
+  { offsetDays: 2, matchDayCode: "MD_SECOND_MINUS_1", subDynamic: "ACTIVATION", focus: "Activation for the second match" },
+  { offsetDays: 4, matchDayCode: "MD_PLUS_1", subDynamic: "RECOVERY", focus: "Recovery after both matches — low intensity, low complexity" },
+];
+
+export function microcycleTemplateRecipe(templateId: MicrocycleTemplateId): TemplateSessionRecipe[] {
+  switch (templateId) {
+    case "SINGLE_SATURDAY":
+    case "SINGLE_SUNDAY":
+      return SINGLE_MATCH_RECIPE;
+    case "DOUBLE_SAT_SUN":
+      return DOUBLE_HEADER_TIGHT_RECIPE;
+    case "DOUBLE_THU_SUN":
+      return DOUBLE_HEADER_GAPPED_RECIPE;
+  }
+}
+
+/** Builds the {date, matchDayCode, subDynamic, focus} rows for a template, anchored to the first match's date. */
+export function buildMicrocycleSessions(templateId: MicrocycleTemplateId, firstMatchDate: Date) {
+  const recipe = microcycleTemplateRecipe(templateId);
+  return recipe.map((r) => {
+    const date = new Date(firstMatchDate);
+    date.setDate(date.getDate() + r.offsetDays);
+    return { date, matchDayCode: r.matchDayCode, subDynamic: r.subDynamic, focus: r.focus };
+  });
 }
 
 export type Complexity = "LOW" | "MEDIUM" | "HIGH";

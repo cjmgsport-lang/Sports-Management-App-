@@ -4,6 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
+import { isAdmin } from "@/lib/roles";
+import { generateFiveYearPlanningCalendar } from "@/lib/sa-calendar";
 
 const eventSchema = z.object({
   teamId: z.string().min(1),
@@ -50,5 +52,36 @@ export async function createEventAction(orgId: string, formData: FormData) {
 export async function deleteEventAction(orgId: string, eventId: string) {
   await requireOrgMembership(orgId);
   await db.calendarEvent.delete({ where: { id: eventId } });
+  revalidatePath(`/org/${orgId}/calendar`);
+}
+
+const PLANNING_EVENT_TYPES = ["PUBLIC_HOLIDAY", "SCHOOL_TERM", "UNIVERSITY_TERM"];
+
+/**
+ * Seeds (or re-seeds) the org-wide 2026-2031 South African public holiday
+ * and approximate school/university term calendar — see
+ * src/lib/sa-calendar.ts. Idempotent: clears any previously-seeded rows
+ * first, so running it again just regenerates a clean set.
+ */
+export async function seedPlanningCalendarAction(orgId: string) {
+  const { user, membership } = await requireOrgMembership(orgId);
+  if (!isAdmin(membership.role)) throw new Error("Only admins can (re)generate the planning calendar.");
+
+  await db.calendarEvent.deleteMany({ where: { organizationId: orgId, type: { in: PLANNING_EVENT_TYPES } } });
+
+  const events = generateFiveYearPlanningCalendar();
+  await db.calendarEvent.createMany({
+    data: events.map((e) => ({
+      organizationId: orgId,
+      title: e.title,
+      type: e.type,
+      startsAt: e.startsAt,
+      endsAt: e.endsAt,
+      description: e.description,
+      createdById: user.id,
+    })),
+  });
+
+  revalidatePath(`/org/${orgId}/administration/planning`);
   revalidatePath(`/org/${orgId}/calendar`);
 }

@@ -10,6 +10,11 @@ export type MembershipRole =
   | "MEDICAL"
   | "MANAGER"
   | "ANALYST"
+  | "ADMIN_ASSISTANT"
+  | "LOGISTICS_MANAGER"
+  | "PERFORMANCE_PSYCH"
+  | "PHYSIO"
+  | "STRENGTH_CONDITIONING"
   | "ATHLETE"
   | "PARENT"
   | "STAFF";
@@ -22,7 +27,21 @@ export const ADMIN_ROLES: string[] = ["OWNER", "ADMIN", "HOD"];
 export const COACHING_ROLES: string[] = ["OWNER", "ADMIN", "HOD", "COACH", "ASSISTANT_COACH", "MANAGER"];
 
 // Roles that can view/edit medical information.
-export const MEDICAL_ROLES: string[] = ["OWNER", "ADMIN", "HOD", "MEDICAL", "COACH"];
+export const MEDICAL_ROLES: string[] = ["OWNER", "ADMIN", "HOD", "MEDICAL", "COACH", "PHYSIO"];
+
+// The support-staff job titles listed in the Administration > People
+// directory (a school/club's backroom team, distinct from athletes/parents).
+export const STAFF_DIRECTORY_ROLES: string[] = [
+  "MANAGER",
+  "ADMIN_ASSISTANT",
+  "COACH",
+  "ASSISTANT_COACH",
+  "LOGISTICS_MANAGER",
+  "PERFORMANCE_PSYCH",
+  "PHYSIO",
+  "STRENGTH_CONDITIONING",
+  "ANALYST",
+];
 
 export function isAdmin(role: string) {
   return ADMIN_ROLES.includes(role);
@@ -43,8 +62,13 @@ export const ROLE_LABELS: Record<string, string> = {
   COACH: "Coach",
   ASSISTANT_COACH: "Assistant Coach",
   MEDICAL: "Medical Staff",
-  MANAGER: "Team Manager",
-  ANALYST: "Analyst",
+  MANAGER: "Manager",
+  ANALYST: "Performance Analyst",
+  ADMIN_ASSISTANT: "Administrative Assistant",
+  LOGISTICS_MANAGER: "Logistics Manager",
+  PERFORMANCE_PSYCH: "Performance Psychologist",
+  PHYSIO: "Physiotherapist",
+  STRENGTH_CONDITIONING: "Strength & Conditioning Coach",
   ATHLETE: "Athlete",
   PARENT: "Parent / Guardian",
   STAFF: "Staff",
