@@ -5,11 +5,18 @@ import crypto from "crypto";
 const UPLOADS_DIR = process.env.UPLOADS_DIR ?? "./storage/uploads";
 
 // On Vercel (and any other read-only/ephemeral-filesystem host) local disk
-// writes don't persist across requests, so when a Blob store is attached
-// (BLOB_READ_WRITE_TOKEN is set automatically) we upload there instead.
-// Local disk remains the zero-config default for local development.
+// writes don't persist across requests — worse, they throw outright, since
+// the deployed function's filesystem isn't writable at all outside /tmp.
+// So: any time we're actually running on Vercel, always use Blob storage
+// instead of gating on BLOB_READ_WRITE_TOKEN specifically. Newer Blob
+// stores connected via the Vercel dashboard authenticate automatically at
+// runtime (OIDC-federated) rather than handing you a static token, so
+// checking for that env var no longer reliably detects whether a store is
+// attached — @vercel/blob's put() resolves the right auth path itself
+// either way. Local disk remains the zero-config default for local dev,
+// where process.env.VERCEL is never set.
 function useBlobStorage() {
-  return !!process.env.BLOB_READ_WRITE_TOKEN;
+  return !!process.env.VERCEL;
 }
 
 export async function saveUploadedFile(orgId: string, file: File) {
