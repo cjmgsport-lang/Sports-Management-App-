@@ -26,8 +26,13 @@ export async function saveUploadedFile(orgId: string, file: File) {
 
   if (useBlobStorage()) {
     const { put } = await import("@vercel/blob");
+    // Private, not public: this app never hands a Blob URL to the client
+    // directly anyway (everything's re-served through our own
+    // access-controlled routes), and Vercel's current stores are
+    // private-only. Reading it back requires the SDK's authenticated
+    // get() rather than a plain fetch — see readUploadedFile below.
     const blob = await put(`${orgId}/${storedName}`, buffer, {
-      access: "public",
+      access: "private",
       addRandomSuffix: false,
     });
     // storedPath is the blob's own URL — readUploadedFile below knows to
@@ -49,15 +54,19 @@ export async function saveUploadedFile(orgId: string, file: File) {
 /**
  * Reads back a file saved by saveUploadedFile. Used by the access-controlled
  * download routes (/api/files/[assetId], /api/org-logo/[orgId]) — callers
- * check org membership themselves before calling this, so a blob's URL is
- * never exposed directly to the client even though Vercel Blob serves
- * "public" objects at an unguessable-but-technically-public URL.
+ * check org membership themselves before calling this. A private Blob's URL
+ * is never exposed to the client either way; the object requires
+ * authentication to read regardless.
  */
 export async function readUploadedFile(storedPath: string): Promise<Buffer> {
   if (storedPath.startsWith("http://") || storedPath.startsWith("https://")) {
-    const res = await fetch(storedPath);
-    if (!res.ok) throw new Error(`Failed to fetch stored file: ${res.status}`);
-    return Buffer.from(await res.arrayBuffer());
+    // A private Blob store requires the SDK's own authenticated get() —
+    // Vercel's OIDC-based auth for Blob isn't something a plain
+    // unauthenticated fetch() of the URL can satisfy.
+    const { get } = await import("@vercel/blob");
+    const result = await get(storedPath, { access: "private" });
+    if (!result) throw new Error(`Stored file not found: ${storedPath}`);
+    return Buffer.from(await new Response(result.stream).arrayBuffer());
   }
   return readFile(path.join(process.cwd(), UPLOADS_DIR, storedPath));
 }
