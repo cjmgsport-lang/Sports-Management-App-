@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select } from "@/components/ui";
@@ -31,7 +32,7 @@ export default async function AdministrationPeoplePage({ params }: { params: Pro
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader title="Staff directory" />
+          <CardHeader title="Staff directory" subtitle={canManage ? "Click a name to edit their details or remove them." : undefined} />
           <CardBody className="p-0">
             {staff.length === 0 ? (
               <div className="p-5">
@@ -51,7 +52,15 @@ export default async function AdministrationPeoplePage({ params }: { params: Pro
                   <tbody className="divide-y divide-slate-100">
                     {staff.map((m) => (
                       <tr key={m.id}>
-                        <td className="px-4 py-2.5 font-medium text-slate-900">{m.user.name}</td>
+                        <td className="px-4 py-2.5 font-medium text-slate-900">
+                          {canManage ? (
+                            <Link href={`/org/${orgId}/members/${m.userId}`} className="text-brand-700 hover:underline">
+                              {m.user.name}
+                            </Link>
+                          ) : (
+                            m.user.name
+                          )}
+                        </td>
                         <td className="px-4 py-2.5">
                           <Badge color="blue">{ROLE_LABELS[m.role]}</Badge>
                         </td>

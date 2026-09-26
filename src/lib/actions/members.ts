@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
@@ -123,4 +124,50 @@ export async function updateMembershipRoleAction(orgId: string, userId: string, 
   });
   revalidatePath(`/org/${orgId}/members/${userId}`);
   revalidatePath(`/org/${orgId}/members`);
+  revalidatePath(`/org/${orgId}/administration/people`);
+}
+
+const contactSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  phone: z.string().optional(),
+});
+
+/** Fixes a typo or updates contact details for someone already added — name, login email and phone. */
+export async function updateMemberContactAction(orgId: string, userId: string, formData: FormData) {
+  const { membership } = await requireOrgMembership(orgId);
+  if (!isAdmin(membership.role)) throw new Error("Only admins can edit member contact details.");
+
+  const parsed = contactSchema.parse({
+    name: formData.get("name"),
+    email: formData.get("email"),
+    phone: formData.get("phone") || undefined,
+  });
+  const email = parsed.email.toLowerCase().trim();
+
+  const existing = await db.user.findUnique({ where: { email } });
+  if (existing && existing.id !== userId) {
+    throw new Error("Another account already uses that email address.");
+  }
+
+  await db.user.update({ where: { id: userId }, data: { name: parsed.name, email, phone: parsed.phone } });
+  revalidatePath(`/org/${orgId}/members/${userId}`);
+  revalidatePath(`/org/${orgId}/members`);
+  revalidatePath(`/org/${orgId}/administration/people`);
+  revalidatePath(`/org/${orgId}/teams`);
+}
+
+/** Removes someone from this organization entirely — their org membership and every team roster spot in this org. The user account itself (and any other org they belong to) is untouched. */
+export async function removeOrgMemberAction(orgId: string, userId: string) {
+  const { user: actor, membership } = await requireOrgMembership(orgId);
+  if (!isAdmin(membership.role)) throw new Error("Only admins can remove members.");
+  if (userId === actor.id) throw new Error("You can't remove yourself from the organization.");
+
+  await db.teamMembership.deleteMany({ where: { userId, team: { organizationId: orgId } } });
+  await db.membership.delete({ where: { userId_organizationId: { userId, organizationId: orgId } } });
+
+  revalidatePath(`/org/${orgId}/members`);
+  revalidatePath(`/org/${orgId}/administration/people`);
+  revalidatePath(`/org/${orgId}/teams`);
+  redirect(`/org/${orgId}/members`);
 }

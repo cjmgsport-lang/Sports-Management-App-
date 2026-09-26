@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select } from "@/components/ui";
-import { addTeamMemberAction, removeTeamMemberAction } from "@/lib/actions/teams";
+import { addTeamMemberAction, removeTeamMemberAction, updateTeamMembershipAction } from "@/lib/actions/teams";
 import { isAdmin, ROLE_LABELS, TEAM_ROLE_LABELS } from "@/lib/roles";
 import { generateSuggestedPassword } from "@/lib/password";
 
@@ -34,44 +35,68 @@ export default async function TeamDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Card>
-            <CardHeader title="Roster" subtitle={`${team.memberships.length} members`} />
+            <CardHeader
+              title="Roster"
+              subtitle={`${team.memberships.length} members${canManage ? " · click Edit to fix a role, jersey or position" : ""}`}
+            />
             <CardBody className="p-0">
               {team.memberships.length === 0 ? (
                 <div className="p-5">
                   <EmptyState title="No members yet" subtitle="Add coaches, athletes and staff to this team." />
                 </div>
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="border-b border-slate-100 text-left text-xs uppercase text-slate-400">
-                    <tr>
-                      <th className="px-5 py-2">Name</th>
-                      <th className="px-5 py-2">Team role</th>
-                      <th className="px-5 py-2">Jersey</th>
-                      <th className="px-5 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {team.memberships.map((tm) => (
-                      <tr key={tm.id}>
-                        <td className="px-5 py-2.5">
-                          <p className="font-medium text-slate-800">{tm.user.name}</p>
+                <ul className="divide-y divide-slate-100">
+                  {team.memberships.map((tm) => (
+                    <li key={tm.id} className="px-5 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <Link href={`/org/${orgId}/members/${tm.userId}`} className="font-medium text-slate-800 hover:text-brand-700 hover:underline">
+                            {tm.user.name}
+                          </Link>
                           <p className="text-xs text-slate-400">{tm.user.email}</p>
-                        </td>
-                        <td className="px-5 py-2.5">
+                        </div>
+                        <div className="flex items-center gap-2">
                           <Badge color={tm.role === "HOD" ? "purple" : "blue"}>{TEAM_ROLE_LABELS[tm.role] ?? tm.role}</Badge>
-                        </td>
-                        <td className="px-5 py-2.5 text-slate-500">{tm.jerseyNumber ?? "—"}</td>
-                        <td className="px-5 py-2.5 text-right">
-                          {canManage && (
-                            <form action={removeTeamMemberAction.bind(null, orgId, teamId, tm.id)}>
-                              <button className="text-xs font-medium text-red-600 hover:underline">Remove</button>
-                            </form>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          {tm.jerseyNumber && <Badge color="slate">#{tm.jerseyNumber}</Badge>}
+                          {tm.position && <Badge color="slate">{tm.position}</Badge>}
+                        </div>
+                      </div>
+
+                      {canManage && (
+                        <details className="mt-2">
+                          <summary className="cursor-pointer text-xs font-medium text-brand-600">Edit</summary>
+                          <form
+                            action={updateTeamMembershipAction.bind(null, orgId, teamId, tm.id)}
+                            className="mt-2 flex flex-wrap items-end gap-2"
+                          >
+                            <div className="w-40">
+                              <Select name="teamRole" defaultValue={tm.role} className="text-xs">
+                                {Object.entries(TEAM_ROLE_LABELS).map(([v, l]) => (
+                                  <option key={v} value={v}>
+                                    {l}
+                                  </option>
+                                ))}
+                              </Select>
+                            </div>
+                            <Input name="jerseyNumber" defaultValue={tm.jerseyNumber ?? ""} placeholder="Jersey #" className="w-24 text-xs" />
+                            <Input name="position" defaultValue={tm.position ?? ""} placeholder="Position" className="w-32 text-xs" />
+                            <Button type="submit" size="sm">
+                              Save
+                            </Button>
+                            <span className="mx-1 h-5 w-px bg-slate-200" />
+                            <button
+                              type="submit"
+                              formAction={removeTeamMemberAction.bind(null, orgId, teamId, tm.id)}
+                              className="text-xs font-medium text-red-600 hover:underline"
+                            >
+                              Remove from team
+                            </button>
+                          </form>
+                        </details>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               )}
             </CardBody>
           </Card>

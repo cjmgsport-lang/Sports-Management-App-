@@ -2,7 +2,14 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Button, Card, CardBody, CardHeader, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
-import { upsertMemberProfileAction, upsertMedicalRecordAction, upsertTransportNeedAction, updateMembershipRoleAction } from "@/lib/actions/members";
+import {
+  upsertMemberProfileAction,
+  upsertMedicalRecordAction,
+  upsertTransportNeedAction,
+  updateMembershipRoleAction,
+  updateMemberContactAction,
+  removeOrgMemberAction,
+} from "@/lib/actions/members";
 import { canSeeMedical, isAdmin, ROLE_LABELS } from "@/lib/roles";
 
 export default async function MemberDetailPage({
@@ -11,7 +18,7 @@ export default async function MemberDetailPage({
   params: Promise<{ orgId: string; userId: string }>;
 }) {
   const { orgId, userId } = await params;
-  const { membership: myMembership } = await requireOrgMembership(orgId);
+  const { user: currentUser, membership: myMembership } = await requireOrgMembership(orgId);
 
   const membership = await db.membership.findUnique({
     where: { userId_organizationId: { userId, organizationId: orgId } },
@@ -29,6 +36,30 @@ export default async function MemberDetailPage({
       <PageHeader title={user.name} subtitle={user.email} />
 
       <div className="space-y-6">
+        {isAdmin(myMembership.role) && (
+          <Card>
+            <CardHeader title="Contact details" subtitle="Fix a typo in their name, login email or phone number." />
+            <CardBody>
+              <form action={updateMemberContactAction.bind(null, orgId, userId)} className="grid gap-3 sm:grid-cols-3">
+                <Field label="Full name">
+                  <Input name="name" required defaultValue={user.name} />
+                </Field>
+                <Field label="Email">
+                  <Input type="email" name="email" required defaultValue={user.email} />
+                </Field>
+                <Field label="Phone">
+                  <Input name="phone" defaultValue={user.phone ?? ""} />
+                </Field>
+                <div className="sm:col-span-3">
+                  <Button type="submit" size="sm">
+                    Save contact details
+                  </Button>
+                </div>
+              </form>
+            </CardBody>
+          </Card>
+        )}
+
         {isAdmin(myMembership.role) && (
           <Card>
             <CardHeader title="Organization role" />
@@ -170,6 +201,19 @@ export default async function MemberDetailPage({
             </form>
           </CardBody>
         </Card>
+
+        {isAdmin(myMembership.role) && userId !== currentUser.id && (
+          <Card>
+            <CardHeader title="Remove from organization" subtitle="Removes their org membership and every team roster spot here. Their account itself isn't deleted." />
+            <CardBody>
+              <form action={removeOrgMemberAction.bind(null, orgId, userId)}>
+                <Button type="submit" variant="danger">
+                  Remove {user.name} from this organization
+                </Button>
+              </form>
+            </CardBody>
+          </Card>
+        )}
       </div>
     </div>
   );

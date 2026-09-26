@@ -120,3 +120,27 @@ export async function removeTeamMemberAction(orgId: string, teamId: string, team
   await db.teamMembership.delete({ where: { id: teamMembershipId } });
   revalidatePath(`/org/${orgId}/teams/${teamId}`);
 }
+
+const editRosterSchema = z.object({
+  teamRole: z.enum(["HEAD_COACH", "ASSISTANT_COACH", "HOD", "MANAGER", "ANALYST", "MEDICAL", "ATHLETE"]),
+  jerseyNumber: z.string().optional(),
+  position: z.string().optional(),
+});
+
+/** Fixes a roster entry's team role, jersey number or position after the fact. */
+export async function updateTeamMembershipAction(orgId: string, teamId: string, teamMembershipId: string, formData: FormData) {
+  const { membership } = await requireOrgMembership(orgId);
+  if (!isAdmin(membership.role) && membership.role !== "COACH" && membership.role !== "MANAGER") {
+    throw new Error("You don't have permission to edit roster entries.");
+  }
+  const parsed = editRosterSchema.parse({
+    teamRole: formData.get("teamRole"),
+    jerseyNumber: formData.get("jerseyNumber") || undefined,
+    position: formData.get("position") || undefined,
+  });
+  await db.teamMembership.update({
+    where: { id: teamMembershipId, teamId },
+    data: { role: parsed.teamRole, jerseyNumber: parsed.jerseyNumber, position: parsed.position },
+  });
+  revalidatePath(`/org/${orgId}/teams/${teamId}`);
+}
