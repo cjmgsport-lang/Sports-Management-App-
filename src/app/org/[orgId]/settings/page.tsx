@@ -132,11 +132,18 @@ export default async function SettingsPage({
           subtitle="A public info page for your community — no login needed. Uses your logo and brand color automatically."
         />
         <CardBody>
-          <p className="mb-3 text-sm text-slate-600">
+          <p className="mb-1.5 text-sm text-slate-600">
             Your page:{" "}
             <a href={`/o/${org?.slug}`} target="_blank" rel="noreferrer" className="font-medium text-brand-600 hover:underline">
               {process.env.NEXTAUTH_URL ?? ""}/o/{org?.slug}
             </a>
+          </p>
+          <p className="mb-3 text-sm text-slate-600">
+            Your branded login page:{" "}
+            <a href={`/o/${org?.slug}/login`} target="_blank" rel="noreferrer" className="font-medium text-brand-600 hover:underline">
+              {process.env.NEXTAUTH_URL ?? ""}/o/{org?.slug}/login
+            </a>{" "}
+            — share this with your team instead of the generic login page, so they see your logo and colors.
           </p>
           {isAdmin(membership.role) ? (
             <form action={updatePublicPageAction.bind(null, orgId)} className="space-y-3">

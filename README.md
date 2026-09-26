@@ -42,6 +42,7 @@ Every spreadsheet-style table (staff, trials criteria, injuries, recruitment, ro
 - **Resource sharing** — booking for fields, balls, bibs, cones, flat markers, poles, mannequins, mini-goals, GPS units, video equipment and video analysis.
 - **Organization settings** — org details, white-label branding (logo + brand color, applied app-wide and on a public page — see below), and real subscription billing via Paystack (Growth/Pro checkout with a monthly or annual price, cancellation, webhook-driven renewals, enforced seat limits per plan).
 - **Public org page** (`/o/[slug]`, no login required) — a shareable page for each client's own community, using their logo and brand color automatically; the description is editable from Settings.
+- **Branded login page** (`/o/[slug]/login`) — a full-bleed splash in the org's own logo and brand color, so each client's team logs in somewhere that looks like theirs rather than the generic `/login`. Linked from the public org page and shown on Settings for admins to copy/share.
 
 ## Tech stack
 

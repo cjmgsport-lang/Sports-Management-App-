@@ -26,7 +26,7 @@ export default async function PublicOrgPage({ params }: { params: Promise<{ slug
       <header className="border-b border-slate-100">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
           <span className="text-sm font-medium text-slate-400">Powered by Freedom Sports Management</span>
-          <Link href="/login" className="text-sm font-medium text-brand-700 hover:underline">
+          <Link href={`/o/${slug}/login`} className="text-sm font-medium text-brand-700 hover:underline">
             Log in
           </Link>
         </div>
@@ -44,7 +44,7 @@ export default async function PublicOrgPage({ params }: { params: Promise<{ slug
 
         <div className="mt-8">
           <Link
-            href="/login"
+            href={`/o/${slug}/login`}
             className="inline-flex items-center justify-center rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
           >
             Member login
