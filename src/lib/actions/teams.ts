@@ -55,7 +55,7 @@ const addMemberSchema = z.object({
     "PARENT",
     "STAFF",
   ]),
-  teamRole: z.enum(["HEAD_COACH", "ASSISTANT_COACH", "HOD", "MANAGER", "ANALYST", "MEDICAL", "ATHLETE"]),
+  teamRole: z.enum(["HEAD_COACH", "ASSISTANT_COACH", "HOD", "MANAGER", "ANALYST", "MEDICAL", "ATHLETE", "GK", "CB", "CM", "SB", "AM", "FWD"]),
   tempPassword: z.string().min(8).optional(),
 });
 
@@ -122,7 +122,7 @@ export async function removeTeamMemberAction(orgId: string, teamId: string, team
 }
 
 const editRosterSchema = z.object({
-  teamRole: z.enum(["HEAD_COACH", "ASSISTANT_COACH", "HOD", "MANAGER", "ANALYST", "MEDICAL", "ATHLETE"]),
+  teamRole: z.enum(["HEAD_COACH", "ASSISTANT_COACH", "HOD", "MANAGER", "ANALYST", "MEDICAL", "ATHLETE", "GK", "CB", "CM", "SB", "AM", "FWD"]),
   jerseyNumber: z.string().optional(),
   position: z.string().optional(),
 });

@@ -89,6 +89,12 @@ export const TEAM_ROLE_LABELS: Record<string, string> = {
   ANALYST: "Analyst",
   MEDICAL: "Medical",
   ATHLETE: "Athlete",
+  GK: "Goalkeeper (GK)",
+  CB: "Centre Back (CB)",
+  CM: "Centre Midfielder (CM)",
+  SB: "Side Back (SB)",
+  AM: "Attacking Midfielder (AM)",
+  FWD: "Forward (FWD)",
 };
 
 export const ORG_TYPE_LABELS: Record<string, string> = {
