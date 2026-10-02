@@ -67,6 +67,10 @@ export async function upsertMedicalRecordAction(orgId: string, userId: string, f
       medications: z.string().optional(),
       doctorName: z.string().optional(),
       doctorPhone: z.string().optional(),
+      injuryHistory: z.string().optional(),
+      currentInjury: z.string().optional(),
+      injuryDate: z.coerce.date().optional(),
+      injuryNotes: z.string().optional(),
       consentGiven: z.coerce.boolean().optional(),
     })
     .parse({
@@ -77,6 +81,10 @@ export async function upsertMedicalRecordAction(orgId: string, userId: string, f
       medications: formData.get("medications") || undefined,
       doctorName: formData.get("doctorName") || undefined,
       doctorPhone: formData.get("doctorPhone") || undefined,
+      injuryHistory: formData.get("injuryHistory") || undefined,
+      currentInjury: formData.get("currentInjury") || undefined,
+      injuryDate: formData.get("injuryDate") || undefined,
+      injuryNotes: formData.get("injuryNotes") || undefined,
       consentGiven: formData.get("consentGiven") === "on",
     });
 

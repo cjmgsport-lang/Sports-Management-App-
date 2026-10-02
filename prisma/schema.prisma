@@ -616,6 +616,10 @@ model MedicalRecord {
   medications      String?
   doctorName       String?
   doctorPhone      String?
+  injuryHistory    String?
+  currentInjury    String?
+  injuryDate       DateTime?
+  injuryNotes      String?
   consentGiven     Boolean  @default(false)
   updatedAt        DateTime @updatedAt
 

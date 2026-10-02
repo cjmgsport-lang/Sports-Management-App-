@@ -145,6 +145,31 @@ export default async function MemberDetailPage({
                 <Field label="Doctor phone">
                   <Input name="doctorPhone" defaultValue={user.medicalRecord?.doctorPhone ?? ""} />
                 </Field>
+
+                <div className="sm:col-span-2 mt-2 border-t border-slate-100 pt-3">
+                  <p className="text-xs font-semibold uppercase text-slate-400">Injury report</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <Field label="Medical / injury history">
+                    <Textarea name="injuryHistory" rows={2} defaultValue={user.medicalRecord?.injuryHistory ?? ""} />
+                  </Field>
+                </div>
+                <Field label="Current injury">
+                  <Input name="currentInjury" defaultValue={user.medicalRecord?.currentInjury ?? ""} />
+                </Field>
+                <Field label="Date injured">
+                  <Input
+                    type="date"
+                    name="injuryDate"
+                    defaultValue={user.medicalRecord?.injuryDate ? user.medicalRecord.injuryDate.toISOString().slice(0, 10) : ""}
+                  />
+                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Injury notes">
+                    <Textarea name="injuryNotes" rows={2} defaultValue={user.medicalRecord?.injuryNotes ?? ""} />
+                  </Field>
+                </div>
+
                 <label className="flex items-center gap-2 text-sm text-slate-600 sm:col-span-2">
                   <input
                     type="checkbox"
