@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, Field, Input, PageHeader, Textarea } from "@/components/ui";
+import { FileInput } from "@/components/file-input";
 import { switchToFreeAction } from "@/lib/actions/settings";
 import { cancelSubscriptionAction, startCheckoutAction } from "@/lib/actions/billing";
 import { resetBrandColorAction, updateBrandingAction, updatePublicPageAction } from "@/lib/actions/branding";
@@ -104,7 +105,7 @@ export default async function SettingsPage({
             {isAdmin(membership.role) ? (
               <form action={updateBrandingAction.bind(null, orgId)} className="flex flex-1 flex-wrap items-end gap-4">
                 <Field label="Logo (PNG, JPEG, WebP or SVG, max 2MB)">
-                  <Input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="w-64" />
+                  <FileInput name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="w-64" />
                 </Field>
                 <Field label="Brand color">
                   <input type="color" name="brandColor" defaultValue={org?.brandColor ?? "#0284c7"} className="h-10 w-16 rounded border border-slate-300" />

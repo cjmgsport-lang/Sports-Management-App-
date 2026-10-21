@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
+import { FileInput } from "@/components/file-input";
 import { deleteTrainingResourceAction, uploadTrainingResourceAction } from "@/lib/actions/training-resources";
 import { TRAINING_CATEGORIES, TRAINING_CATEGORY_LABELS, TRAINING_RESOURCE_KIND_LABELS, TRAINING_RESOURCE_KINDS } from "@/lib/training-categories";
 import { canCoach } from "@/lib/roles";
@@ -74,7 +75,7 @@ export default async function TrainingFoldersPage({ params }: { params: Promise<
             <CardBody>
               <form action={uploadTrainingResourceAction.bind(null, orgId)} className="space-y-3">
                 <Field label="File">
-                  <Input type="file" name="file" required />
+                  <FileInput name="file" required />
                 </Field>
                 <Field label="Title">
                   <Input name="title" required placeholder="e.g. 4v4+2 rondo — press triggers" />

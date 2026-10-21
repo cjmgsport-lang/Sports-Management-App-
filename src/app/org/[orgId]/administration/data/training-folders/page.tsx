@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
+import { FileInput } from "@/components/file-input";
 import { deleteUploadAction, uploadAssetAction } from "@/lib/actions/uploads";
 import { format } from "date-fns";
 
@@ -76,7 +77,7 @@ export default async function TrainingFoldersPage({ params }: { params: Promise<
           <CardBody>
             <form action={uploadAssetAction.bind(null, orgId)} className="space-y-3">
               <Field label="File">
-                <Input type="file" name="file" required />
+                <FileInput name="file" required />
               </Field>
               <Field label="Folder">
                 <Input name="folder" required list="existing-folders" placeholder="e.g. Pre-season 2026" />

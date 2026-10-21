@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
+import { FileInput } from "@/components/file-input";
 import { updateGameContinuumMomentAction } from "@/lib/actions/game-continuum";
 import { GAME_CONTINUUM_LABELS, GAME_CONTINUUM_MOMENTS } from "@/lib/game-continuum";
 import { canCoach } from "@/lib/roles";
@@ -78,7 +79,7 @@ export default async function GameContinuumPage({
                   >
                     <input type="hidden" name="moment" value={momentId} />
                     <Field label="Field-space image">
-                      <Input type="file" name="image" accept="image/png,image/jpeg,image/webp,image/svg+xml" />
+                      <FileInput name="image" accept="image/png,image/jpeg,image/webp,image/svg+xml" />
                     </Field>
                     <Field label="Description">
                       <Textarea name="description" rows={2} defaultValue={existing?.description ?? ""} />

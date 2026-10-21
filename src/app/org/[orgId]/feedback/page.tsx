@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
+import { FileInput } from "@/components/file-input";
 import { addAthleteCommentAction, createFeedbackAction } from "@/lib/actions/feedback";
 import { uploadAssetAction } from "@/lib/actions/uploads";
 import { format } from "date-fns";
@@ -84,7 +85,7 @@ export default async function FeedbackPage({ params }: { params: Promise<{ orgId
                   >
                     <input type="hidden" name="linkedFeedbackId" value={f.id} />
                     <input type="hidden" name="kind" value="OTHER" />
-                    <input type="file" name="file" required accept="video/*,application/pdf,.ppt,.pptx" className="flex-1 text-xs" />
+                    <FileInput name="file" required accept="video/*,application/pdf,.ppt,.pptx" className="text-xs" wrapperClassName="flex-1" />
                     <Button type="submit" size="sm" variant="secondary">
                       Attach video/presentation
                     </Button>
