@@ -70,11 +70,12 @@ export const MOMENT_COLORS: Record<Moment, "blue" | "red" | "green" | "amber" | 
   DEFENSIVE_D_BEHAVIOUR: "red",
 };
 
+// Moments coaches can pick. The two broad organisation moments were split
+// into zone/block-specific ones; they stay in the type and label maps only so
+// principles, drills and sessions already tagged with them still display.
 export const MOMENTS: Moment[] = [
-  "OFFENSIVE_ORGANIZATION",
   "POSSESSION_ALARM_SAFETY",
   "POSSESSION_CREATIVE_FINISH",
-  "DEFENSIVE_ORGANIZATION",
   "BALL_RECOVERY_HIGH",
   "BALL_RECOVERY_LOW",
   "ATTACKING_TRANSITION",
@@ -83,6 +84,8 @@ export const MOMENTS: Moment[] = [
   "ATTACKING_D_BEHAVIOUR",
   "DEFENSIVE_D_BEHAVIOUR",
 ];
+
+export const LEGACY_MOMENTS: Moment[] = ["OFFENSIVE_ORGANIZATION", "DEFENSIVE_ORGANIZATION"];
 
 export type SubDynamic = "RECOVERY" | "DURATION" | "STRENGTH" | "SPEED_ENDURANCE" | "SPEED" | "ACTIVATION";
 

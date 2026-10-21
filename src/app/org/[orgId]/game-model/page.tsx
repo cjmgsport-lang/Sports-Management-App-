@@ -3,7 +3,7 @@ import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { TeamFilter } from "@/components/team-filter";
 import { createPrincipleAction, deletePrincipleAction } from "@/lib/actions/game-model";
-import { MOMENT_COLORS, MOMENT_LABELS, MOMENTS } from "@/lib/tactical-periodization";
+import { LEGACY_MOMENTS, MOMENT_COLORS, MOMENT_LABELS, MOMENTS } from "@/lib/tactical-periodization";
 import { isAdmin } from "@/lib/roles";
 
 export default async function GameModelPage({
@@ -24,6 +24,9 @@ export default async function GameModelPage({
     ? await db.gamePrinciple.findMany({ where: { teamId: activeTeamId }, orderBy: [{ moment: "asc" }, { orderIndex: "asc" }] })
     : [];
 
+  // Retired moments only get a card while principles are still filed under them.
+  const visibleMoments = [...MOMENTS, ...LEGACY_MOMENTS.filter((m) => principles.some((p) => p.moment === m))];
+
   const canEdit = isAdmin(membership.role) || membership.role === "COACH" || membership.role === "ASSISTANT_COACH" || membership.role === "MANAGER";
 
   return (
@@ -39,7 +42,7 @@ export default async function GameModelPage({
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
-            {MOMENTS.map((moment) => {
+            {visibleMoments.map((moment) => {
               const items = principles.filter((p) => p.moment === moment);
               return (
                 <Card key={moment}>
