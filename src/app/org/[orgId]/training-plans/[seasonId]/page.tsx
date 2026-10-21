@@ -151,7 +151,7 @@ export default async function SeasonPage({
                 <Input name="name" required placeholder="Pre-season" />
               </Field>
               <Field label="Focus">
-                <Input name="focus" placeholder="e.g. Introduce defensive organization principles" />
+                <Input name="focus" placeholder="e.g. Introduce ball recovery principles" />
               </Field>
               <Field label="Start date">
                 <Input type="date" name="startDate" required />

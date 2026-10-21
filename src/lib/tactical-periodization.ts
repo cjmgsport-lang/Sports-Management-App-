@@ -23,16 +23,16 @@ export type Moment =
   | "SET_PIECES";
 
 export const MOMENT_LABELS: Record<Moment, string> = {
-  OFFENSIVE_ORGANIZATION: "Offensive Organization",
-  DEFENSIVE_ORGANIZATION: "Defensive Organization",
+  OFFENSIVE_ORGANIZATION: "Possession",
+  DEFENSIVE_ORGANIZATION: "Ball Recovery",
   ATTACKING_TRANSITION: "Attacking Transition (won possession)",
   DEFENSIVE_TRANSITION: "Defensive Transition (lost possession)",
   SET_PIECES: "Set Pieces",
 };
 
 export const MOMENT_SHORT_LABELS: Record<Moment, string> = {
-  OFFENSIVE_ORGANIZATION: "Offensive Org.",
-  DEFENSIVE_ORGANIZATION: "Defensive Org.",
+  OFFENSIVE_ORGANIZATION: "Possession",
+  DEFENSIVE_ORGANIZATION: "Ball Recovery",
   ATTACKING_TRANSITION: "Attacking Transition",
   DEFENSIVE_TRANSITION: "Defensive Transition",
   SET_PIECES: "Set Pieces",
