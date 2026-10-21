@@ -17,41 +17,71 @@
 
 export type Moment =
   | "OFFENSIVE_ORGANIZATION"
+  | "POSSESSION_ALARM_SAFETY"
+  | "POSSESSION_CREATIVE_FINISH"
   | "DEFENSIVE_ORGANIZATION"
+  | "BALL_RECOVERY_HIGH"
+  | "BALL_RECOVERY_LOW"
   | "ATTACKING_TRANSITION"
   | "DEFENSIVE_TRANSITION"
-  | "SET_PIECES";
+  | "SET_PIECES"
+  | "ATTACKING_D_BEHAVIOUR"
+  | "DEFENSIVE_D_BEHAVIOUR";
 
 export const MOMENT_LABELS: Record<Moment, string> = {
   OFFENSIVE_ORGANIZATION: "Possession",
+  POSSESSION_ALARM_SAFETY: "Possession – Alarm & Safety Zone",
+  POSSESSION_CREATIVE_FINISH: "Possession – Creative & Finish Zone",
   DEFENSIVE_ORGANIZATION: "Ball Recovery",
+  BALL_RECOVERY_HIGH: "Ball Recovery High",
+  BALL_RECOVERY_LOW: "Ball Recovery Low",
   ATTACKING_TRANSITION: "Attacking Transition (won possession)",
   DEFENSIVE_TRANSITION: "Defensive Transition (lost possession)",
   SET_PIECES: "Set Pieces",
+  ATTACKING_D_BEHAVIOUR: "Attacking D Behaviour",
+  DEFENSIVE_D_BEHAVIOUR: "Defensive D Behaviour",
 };
 
 export const MOMENT_SHORT_LABELS: Record<Moment, string> = {
   OFFENSIVE_ORGANIZATION: "Possession",
+  POSSESSION_ALARM_SAFETY: "Alarm & Safety Zone",
+  POSSESSION_CREATIVE_FINISH: "Creative & Finish Zone",
   DEFENSIVE_ORGANIZATION: "Ball Recovery",
+  BALL_RECOVERY_HIGH: "Ball Recovery High",
+  BALL_RECOVERY_LOW: "Ball Recovery Low",
   ATTACKING_TRANSITION: "Attacking Transition",
   DEFENSIVE_TRANSITION: "Defensive Transition",
   SET_PIECES: "Set Pieces",
+  ATTACKING_D_BEHAVIOUR: "Attacking D",
+  DEFENSIVE_D_BEHAVIOUR: "Defensive D",
 };
 
 export const MOMENT_COLORS: Record<Moment, "blue" | "red" | "green" | "amber" | "purple"> = {
   OFFENSIVE_ORGANIZATION: "blue",
+  POSSESSION_ALARM_SAFETY: "blue",
+  POSSESSION_CREATIVE_FINISH: "blue",
   DEFENSIVE_ORGANIZATION: "red",
+  BALL_RECOVERY_HIGH: "red",
+  BALL_RECOVERY_LOW: "red",
   ATTACKING_TRANSITION: "green",
   DEFENSIVE_TRANSITION: "amber",
   SET_PIECES: "purple",
+  ATTACKING_D_BEHAVIOUR: "blue",
+  DEFENSIVE_D_BEHAVIOUR: "red",
 };
 
 export const MOMENTS: Moment[] = [
   "OFFENSIVE_ORGANIZATION",
+  "POSSESSION_ALARM_SAFETY",
+  "POSSESSION_CREATIVE_FINISH",
   "DEFENSIVE_ORGANIZATION",
+  "BALL_RECOVERY_HIGH",
+  "BALL_RECOVERY_LOW",
   "ATTACKING_TRANSITION",
   "DEFENSIVE_TRANSITION",
   "SET_PIECES",
+  "ATTACKING_D_BEHAVIOUR",
+  "DEFENSIVE_D_BEHAVIOUR",
 ];
 
 export type SubDynamic = "RECOVERY" | "DURATION" | "STRENGTH" | "SPEED_ENDURANCE" | "SPEED" | "ACTIVATION";
