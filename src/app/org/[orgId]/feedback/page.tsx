@@ -85,7 +85,7 @@ export default async function FeedbackPage({ params }: { params: Promise<{ orgId
                   >
                     <input type="hidden" name="linkedFeedbackId" value={f.id} />
                     <input type="hidden" name="kind" value="OTHER" />
-                    <FileInput name="file" required accept="video/*,application/pdf,.ppt,.pptx" className="text-xs" wrapperClassName="flex-1" />
+                    <FileInput name="file" required directUploadOrgId={process.env.VERCEL ? orgId : undefined} accept="video/*,application/pdf,.ppt,.pptx" className="text-xs" wrapperClassName="flex-1" />
                     <Button type="submit" size="sm" variant="secondary">
                       Attach video/presentation
                     </Button>

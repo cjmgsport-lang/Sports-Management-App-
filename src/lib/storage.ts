@@ -4,6 +4,10 @@ import crypto from "crypto";
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR ?? "./storage/uploads";
 
+// Ceiling for files the browser uploads straight to Blob storage (match video
+// is the usual big one).
+export const MAX_DIRECT_UPLOAD_BYTES = 500 * 1024 * 1024;
+
 // On Vercel (and any other read-only/ephemeral-filesystem host) local disk
 // writes don't persist across requests — worse, they throw outright, since
 // the deployed function's filesystem isn't writable at all outside /tmp.
@@ -49,6 +53,52 @@ export async function saveUploadedFile(orgId: string, file: File) {
     storedPath: path.join(orgId, storedName),
     sizeBytes: buffer.byteLength,
   };
+}
+
+/**
+ * The file a form submitted under `field`: either posted with the form, or —
+ * when it was too big for that — already uploaded straight to Blob storage by
+ * the FileInput component, which then submits `<field>BlobUrl` and
+ * `<field>BlobName` instead. Returns null when neither is present.
+ */
+export async function resolveUploadedFile(orgId: string, formData: FormData, field: string) {
+  const file = formData.get(field);
+  if (file instanceof File && file.size > 0) {
+    const saved = await saveUploadedFile(orgId, file);
+    return { ...saved, filename: file.name, mimeType: file.type || "application/octet-stream" };
+  }
+
+  const blobUrl = formData.get(`${field}BlobUrl`);
+  if (typeof blobUrl !== "string" || !blobUrl) return null;
+
+  // Don't trust the submitted URL: confirm it exists in our store and sits in
+  // this org's folder (the upload route only issues tokens for that folder).
+  const { head } = await import("@vercel/blob");
+  const blob = await head(blobUrl);
+  if (!blob.pathname.startsWith(`${orgId}/`)) throw new Error("That file doesn't belong to this organization.");
+
+  const name = formData.get(`${field}BlobName`);
+  return {
+    storedPath: blob.url,
+    sizeBytes: blob.size,
+    filename: typeof name === "string" && name ? name : path.basename(blob.pathname),
+    mimeType: blob.contentType || "application/octet-stream",
+  };
+}
+
+/**
+ * Opens a stored file for streaming back to the client. Prefer this over
+ * readUploadedFile for anything that may be large: Vercel caps buffered
+ * function responses at 4.5 MB, but streamed ones aren't limited.
+ */
+export async function openUploadedFile(storedPath: string): Promise<BodyInit> {
+  if (storedPath.startsWith("http://") || storedPath.startsWith("https://")) {
+    const { get } = await import("@vercel/blob");
+    const result = await get(storedPath, { access: "private" });
+    if (!result?.stream) throw new Error(`Stored file not found: ${storedPath}`);
+    return result.stream;
+  }
+  return new Uint8Array(await readFile(path.join(process.cwd(), UPLOADS_DIR, storedPath)));
 }
 
 /**

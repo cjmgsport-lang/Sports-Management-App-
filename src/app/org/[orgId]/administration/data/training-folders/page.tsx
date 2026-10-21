@@ -77,7 +77,7 @@ export default async function TrainingFoldersPage({ params }: { params: Promise<
           <CardBody>
             <form action={uploadAssetAction.bind(null, orgId)} className="space-y-3">
               <Field label="File">
-                <FileInput name="file" required />
+                <FileInput name="file" required directUploadOrgId={process.env.VERCEL ? orgId : undefined} />
               </Field>
               <Field label="Folder">
                 <Input name="folder" required list="existing-folders" placeholder="e.g. Pre-season 2026" />

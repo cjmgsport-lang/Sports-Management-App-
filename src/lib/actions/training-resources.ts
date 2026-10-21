@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { canCoach } from "@/lib/roles";
-import { saveUploadedFile } from "@/lib/storage";
+import { resolveUploadedFile } from "@/lib/storage";
 import { TRAINING_CATEGORIES, TRAINING_RESOURCE_KINDS, type TrainingCategory, type TrainingResourceKind } from "@/lib/training-categories";
 
 const metaSchema = z.object({
@@ -20,8 +20,8 @@ export async function uploadTrainingResourceAction(orgId: string, formData: Form
   const { user, membership } = await requireOrgMembership(orgId);
   if (!canCoach(membership.role)) throw new Error("You don't have permission to upload training content.");
 
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) throw new Error("Please choose a file to upload.");
+  const file = await resolveUploadedFile(orgId, formData, "file");
+  if (!file) throw new Error("Please choose a file to upload.");
 
   const parsed = metaSchema.parse({
     teamId: formData.get("teamId") || undefined,
@@ -31,8 +31,6 @@ export async function uploadTrainingResourceAction(orgId: string, formData: Form
     description: formData.get("description") || undefined,
   });
 
-  const { storedPath } = await saveUploadedFile(orgId, file);
-
   await db.trainingResource.create({
     data: {
       organizationId: orgId,
@@ -41,8 +39,8 @@ export async function uploadTrainingResourceAction(orgId: string, formData: Form
       kind: parsed.kind,
       title: parsed.title,
       description: parsed.description,
-      storedPath,
-      mimeType: file.type || "application/octet-stream",
+      storedPath: file.storedPath,
+      mimeType: file.mimeType,
       uploadedById: user.id,
     },
   });

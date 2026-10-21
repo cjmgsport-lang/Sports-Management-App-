@@ -97,7 +97,7 @@ export default async function UploadsPage({
           <CardBody>
             <form action={uploadAssetAction.bind(null, orgId)} className="space-y-3">
               <Field label="File">
-                <FileInput name="file" required />
+                <FileInput name="file" required directUploadOrgId={process.env.VERCEL ? orgId : undefined} />
               </Field>
               <Field label="Type">
                 <Select name="kind" defaultValue="VIDEO">

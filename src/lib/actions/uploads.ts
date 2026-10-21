@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
-import { saveUploadedFile } from "@/lib/storage";
+import { resolveUploadedFile } from "@/lib/storage";
 
 const metaSchema = z.object({
   kind: z.enum(["GPS", "VIDEO", "SESSION_ANIMATION", "PDF", "IMAGE", "OTHER"]),
@@ -19,10 +19,8 @@ const metaSchema = z.object({
 export async function uploadAssetAction(orgId: string, formData: FormData) {
   const { user } = await requireOrgMembership(orgId);
 
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    throw new Error("Please choose a file to upload.");
-  }
+  const file = await resolveUploadedFile(orgId, formData, "file");
+  if (!file) throw new Error("Please choose a file to upload.");
 
   const parsed = metaSchema.parse({
     kind: formData.get("kind"),
@@ -34,16 +32,14 @@ export async function uploadAssetAction(orgId: string, formData: FormData) {
     folder: formData.get("folder") || undefined,
   });
 
-  const { storedPath, sizeBytes } = await saveUploadedFile(orgId, file);
-
   await db.uploadAsset.create({
     data: {
       organizationId: orgId,
       kind: parsed.kind,
-      filename: file.name,
-      storedPath,
-      mimeType: file.type || "application/octet-stream",
-      sizeBytes,
+      filename: file.filename,
+      storedPath: file.storedPath,
+      mimeType: file.mimeType,
+      sizeBytes: file.sizeBytes,
       description: parsed.description,
       uploadedById: user.id,
       linkedFixtureId: parsed.linkedFixtureId || null,
