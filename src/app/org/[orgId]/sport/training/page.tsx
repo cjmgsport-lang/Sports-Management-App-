@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
-import { FileInput } from "@/components/file-input";
+import { FileOrLinkInput } from "@/components/file-or-link-input";
+import { ExternalVideo } from "@/components/external-video";
 import { deleteTrainingResourceAction, uploadTrainingResourceAction } from "@/lib/actions/training-resources";
 import { TRAINING_CATEGORIES, TRAINING_CATEGORY_LABELS, TRAINING_RESOURCE_KIND_LABELS, TRAINING_RESOURCE_KINDS } from "@/lib/training-categories";
 import { canCoach } from "@/lib/roles";
@@ -53,6 +54,7 @@ export default async function TrainingFoldersPage({ params }: { params: Promise<
                               uploaded by {r.uploadedBy.name} on {format(r.createdAt, "d MMM yyyy")}
                             </p>
                             {r.description && <p className="mt-1 text-sm text-slate-400">{r.description}</p>}
+                            {r.externalUrl && <ExternalVideo url={r.externalUrl} title={r.title} />}
                           </div>
                           {canManage && (
                             <form action={deleteTrainingResourceAction.bind(null, orgId, r.id)}>
@@ -74,8 +76,8 @@ export default async function TrainingFoldersPage({ params }: { params: Promise<
             <CardHeader title="Upload training content" />
             <CardBody>
               <form action={uploadTrainingResourceAction.bind(null, orgId)} className="space-y-3">
-                <Field label="File">
-                  <FileInput name="file" required directUploadOrgId={process.env.VERCEL ? orgId : undefined} />
+                <Field label="File or link">
+                  <FileOrLinkInput name="file" directUploadOrgId={process.env.VERCEL ? orgId : undefined} />
                 </Field>
                 <Field label="Title">
                   <Input name="title" required placeholder="e.g. 4v4+2 rondo — press triggers" />

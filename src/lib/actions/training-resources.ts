@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { canCoach } from "@/lib/roles";
 import { resolveUploadedFile } from "@/lib/storage";
+import { parseExternalUrl } from "@/lib/external-links";
 import { TRAINING_CATEGORIES, TRAINING_RESOURCE_KINDS, type TrainingCategory, type TrainingResourceKind } from "@/lib/training-categories";
 
 const metaSchema = z.object({
@@ -20,8 +21,9 @@ export async function uploadTrainingResourceAction(orgId: string, formData: Form
   const { user, membership } = await requireOrgMembership(orgId);
   if (!canCoach(membership.role)) throw new Error("You don't have permission to upload training content.");
 
+  const externalUrl = parseExternalUrl(formData.get("externalUrl"));
   const file = await resolveUploadedFile(orgId, formData, "file");
-  if (!file) throw new Error("Please choose a file to upload.");
+  if (!file && !externalUrl) throw new Error("Please choose a file to upload or paste a link.");
 
   const parsed = metaSchema.parse({
     teamId: formData.get("teamId") || undefined,
@@ -39,8 +41,7 @@ export async function uploadTrainingResourceAction(orgId: string, formData: Form
       kind: parsed.kind,
       title: parsed.title,
       description: parsed.description,
-      storedPath: file.storedPath,
-      mimeType: file.mimeType,
+      ...(file ? { storedPath: file.storedPath, mimeType: file.mimeType } : { storedPath: "", mimeType: "text/uri-list", externalUrl }),
       uploadedById: user.id,
     },
   });

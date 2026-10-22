@@ -20,6 +20,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ass
   });
   if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  if (asset.externalUrl) return NextResponse.redirect(asset.externalUrl);
+
   const body = await openUploadedFile(asset.storedPath);
   return new NextResponse(body, {
     headers: {

@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
-import { FileInput } from "@/components/file-input";
+import { FileOrLinkInput } from "@/components/file-or-link-input";
+import { ExternalVideo } from "@/components/external-video";
 import { deleteUploadAction, uploadAssetAction } from "@/lib/actions/uploads";
 import { format } from "date-fns";
 
@@ -59,6 +60,7 @@ export default async function TrainingFoldersPage({ params }: { params: Promise<
                             uploaded by {u.uploadedBy.name} on {format(u.createdAt, "d MMM yyyy")}
                           </p>
                           {u.description && <p className="mt-1 text-sm text-slate-400">{u.description}</p>}
+                          {u.externalUrl && <ExternalVideo url={u.externalUrl} title={u.filename} />}
                         </div>
                         <form action={deleteUploadAction.bind(null, orgId, u.id)}>
                           <button className="text-xs font-medium text-red-600 hover:underline">Delete</button>
@@ -76,8 +78,8 @@ export default async function TrainingFoldersPage({ params }: { params: Promise<
           <CardHeader title="Upload to a folder" />
           <CardBody>
             <form action={uploadAssetAction.bind(null, orgId)} className="space-y-3">
-              <Field label="File">
-                <FileInput name="file" required directUploadOrgId={process.env.VERCEL ? orgId : undefined} />
+              <Field label="File or link">
+                <FileOrLinkInput name="file" directUploadOrgId={process.env.VERCEL ? orgId : undefined} />
               </Field>
               <Field label="Folder">
                 <Input name="folder" required list="existing-folders" placeholder="e.g. Pre-season 2026" />

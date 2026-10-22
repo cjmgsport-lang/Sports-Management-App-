@@ -537,6 +537,9 @@ model UploadAsset {
   // Free-text folder name for the Administration > Data "Training folders
   // and uploads" browser — distinct from `kind`, which is the file type.
   folder           String?
+  // Set instead of a stored file when the item is a link (YouTube, Drive…);
+  // storedPath is then empty and sizeBytes 0.
+  externalUrl      String?
   createdAt        DateTime   @default(now())
 
   organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -885,6 +888,8 @@ model TrainingResource {
   storedPath     String
   mimeType       String
   kind           String // IMAGE | PDF | VIDEO | ANIMATION
+  // Set instead of a stored file for links; storedPath is then empty.
+  externalUrl    String?
   uploadedById   String
   createdAt      DateTime @default(now())
 

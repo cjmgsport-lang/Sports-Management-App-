@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
-import { FileInput } from "@/components/file-input";
+import { FileOrLinkInput } from "@/components/file-or-link-input";
+import { ExternalVideo } from "@/components/external-video";
 import { addAthleteCommentAction, createFeedbackAction } from "@/lib/actions/feedback";
 import { uploadAssetAction } from "@/lib/actions/uploads";
 import { format } from "date-fns";
@@ -75,17 +76,18 @@ export default async function FeedbackPage({ params }: { params: Promise<{ orgId
                             {u.filename}
                           </a>{" "}
                           <Badge color="slate">{u.kind}</Badge>
+                          {u.externalUrl && <ExternalVideo url={u.externalUrl} title={u.filename} />}
                         </li>
                       ))}
                     </ul>
                   )}
                   <form
                     action={uploadAssetAction.bind(null, orgId)}
-                    className="flex items-center gap-2 border-t border-slate-100 pt-2"
+                    className="flex items-start gap-2 border-t border-slate-100 pt-2"
                   >
                     <input type="hidden" name="linkedFeedbackId" value={f.id} />
                     <input type="hidden" name="kind" value="OTHER" />
-                    <FileInput name="file" required directUploadOrgId={process.env.VERCEL ? orgId : undefined} accept="video/*,application/pdf,.ppt,.pptx" className="text-xs" wrapperClassName="flex-1" />
+                    <FileOrLinkInput name="file" directUploadOrgId={process.env.VERCEL ? orgId : undefined} accept="video/*,application/pdf,.ppt,.pptx" className="text-xs" wrapperClassName="flex-1" />
                     <Button type="submit" size="sm" variant="secondary">
                       Attach video/presentation
                     </Button>

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireOrgMembership } from "@/lib/current-user";
 import { resolveUploadedFile } from "@/lib/storage";
+import { describeExternalUrl, parseExternalUrl } from "@/lib/external-links";
 
 const metaSchema = z.object({
   kind: z.enum(["GPS", "VIDEO", "SESSION_ANIMATION", "PDF", "IMAGE", "OTHER"]),
@@ -19,8 +20,9 @@ const metaSchema = z.object({
 export async function uploadAssetAction(orgId: string, formData: FormData) {
   const { user } = await requireOrgMembership(orgId);
 
+  const externalUrl = parseExternalUrl(formData.get("externalUrl"));
   const file = await resolveUploadedFile(orgId, formData, "file");
-  if (!file) throw new Error("Please choose a file to upload.");
+  if (!file && !externalUrl) throw new Error("Please choose a file to upload or paste a link.");
 
   const parsed = metaSchema.parse({
     kind: formData.get("kind"),
@@ -36,10 +38,9 @@ export async function uploadAssetAction(orgId: string, formData: FormData) {
     data: {
       organizationId: orgId,
       kind: parsed.kind,
-      filename: file.filename,
-      storedPath: file.storedPath,
-      mimeType: file.mimeType,
-      sizeBytes: file.sizeBytes,
+      ...(file
+        ? { filename: file.filename, storedPath: file.storedPath, mimeType: file.mimeType, sizeBytes: file.sizeBytes }
+        : { filename: describeExternalUrl(externalUrl!), storedPath: "", mimeType: "text/uri-list", sizeBytes: 0, externalUrl }),
       description: parsed.description,
       uploadedById: user.id,
       linkedFixtureId: parsed.linkedFixtureId || null,
