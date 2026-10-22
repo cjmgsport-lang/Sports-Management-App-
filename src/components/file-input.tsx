@@ -30,13 +30,21 @@ export function FileInput({ onChange, wrapperClassName, directUploadOrgId, name,
     input.setCustomValidity("Please wait for the file to finish uploading.");
     setDirect({ status: "uploading", percent: 0 });
     try {
-      const { upload } = await import("@vercel/blob/client");
-      const blob = await upload(`${orgId}/${file.name}`, file, {
-        access: "private",
+      const { upload, uploadPresigned } = await import("@vercel/blob/client");
+      const options = {
+        access: "private" as const,
         handleUploadUrl: `/api/blob-upload/${orgId}`,
         multipart: true,
-        onUploadProgress: ({ percentage }) => setDirect({ status: "uploading", percent: Math.round(percentage) }),
-      });
+        onUploadProgress: ({ percentage }: { percentage: number }) => setDirect({ status: "uploading", percent: Math.round(percentage) }),
+      };
+      const pathname = `${orgId}/${file.name}`;
+      // Presigned uploads work with any connected Blob store; the classic
+      // client-token flow needs BLOB_READ_WRITE_TOKEN. Try both.
+      const blob = await uploadPresigned(pathname, file, options).catch((presignedErr) =>
+        upload(pathname, file, options).catch(() => {
+          throw presignedErr;
+        })
+      );
       // The file itself has already been stored; don't post it again.
       input.value = "";
       input.setCustomValidity("");
